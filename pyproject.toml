@@ -1,6 +1,6 @@
 [project]
-name = "libcurses"
-version = "1.0.0"
+name = "rlane-libcurses"
+version = "1.0.1"
 description = "Curses based boxes, menus, loggers"
 authors = [
     {name = "Russel Lane", email = "russel@rlane.com"}

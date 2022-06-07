@@ -27,6 +27,8 @@ def getkey(win, no_mouse: bool = False) -> int:
     while True:
         try:
             win.refresh()
+            with libcurses.core.LOCK:
+                curses.doupdate()
             key = win.getch()
             if key < 0:
                 return key

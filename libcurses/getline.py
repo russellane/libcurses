@@ -48,8 +48,11 @@ def getline(win):
                 win.addstr(y, x, line)
 
         elif curses.ascii.isprint(key):
-            line += chr(key)
-            win.addstr(chr(key))
+            try:
+                win.addstr(chr(key))
+                line += chr(key)
+            except curses.error as err:
+                logger.error(f"err={err} locals={locals()}")
 
         else:
             logger.trace(f"ignoring not isprint key={key!r}")

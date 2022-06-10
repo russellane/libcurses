@@ -150,14 +150,14 @@ class LoggerWindow:
             self._win.addstr(level, color)
             self._win.addch(curses.ACS_VLINE)
             self._win.addstr(message.rstrip(), color)
-            self._win.refresh()
+            self._win.noutrefresh()
 
             if libcurses.core.CURSORWIN:
                 try:
                     libcurses.core.CURSORWIN.move(y, x)
                 except curses.error as err:
                     print(f"y={y} x={x} err={err}", file=sys.stderr)
-                libcurses.core.CURSORWIN.refresh()
+                libcurses.core.CURSORWIN.noutrefresh()
             else:
                 curses.setsyx(y, x)
 

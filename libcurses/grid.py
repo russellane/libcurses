@@ -568,28 +568,23 @@ class Grid(ResizeMixin):
     def redraw(self):
         """Redraw grid."""
 
-        self.win.clear()
-        self.grid = [[0 for x in range(self.ncols)] for y in range(self.nlines)]
-
-        self._draw_box(self.nlines, self.ncols, 0, 0)
-
-        for win in self.boxes[1:]:
-            nlines, ncols = win.getmaxyx()
-            begin_y, begin_x = win.getbegyx()
-            self._draw_box(nlines + 2, ncols + 2, begin_y - 1, begin_x - 1)
-
-        self._render_boxes()
-
-        self.refresh()
-
-    def refresh(self):
-        """Refresh grid."""
-
-        for win in self.boxes:
-            win.touchwin()
-            win.noutrefresh()
-
         with libcurses.core.LOCK:
+            self.win.clear()
+            self.grid = [[0 for x in range(self.ncols)] for y in range(self.nlines)]
+
+            self._draw_box(self.nlines, self.ncols, 0, 0)
+
+            for win in self.boxes[1:]:
+                nlines, ncols = win.getmaxyx()
+                begin_y, begin_x = win.getbegyx()
+                self._draw_box(nlines + 2, ncols + 2, begin_y - 1, begin_x - 1)
+
+            self._render_boxes()
+
+            for win in self.boxes:
+                win.touchwin()
+                win.noutrefresh()
+
             curses.doupdate()
 
     def winyx(self, win):

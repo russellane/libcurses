@@ -1,5 +1,6 @@
 """Curses based boxes, menus, loggers."""
 
+from libcurses.colormap import get_colormap  # noqa
 from libcurses.core import register_fkey, wrapper  # noqa
 from libcurses.getkey import getkey  # noqa
 from libcurses.getline import getline  # noqa

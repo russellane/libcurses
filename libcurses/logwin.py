@@ -1,26 +1,27 @@
 """Curses Logger."""
 
 import curses
-import re
 import sys
 
 from loguru import logger
 
 import libcurses.core
+from libcurses.colormap import get_colormap
 
 
 class LoggerWindow:
     """Logger sink display to curses window."""
 
-    # Map each loguru level name to a curses color/attr
-    colormap = {}  # key=loguru level name, value=curses color/attr
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(self, win):
         """Create logger window."""
 
+        self._colormap = get_colormap()
         self._win = win  # logger window
         self._level_name = "INFO"
-        self._gutter = "│"  # split messages on this separater
+        self._msg_delim = "|"
+        self._display_delim = "|"
 
         self._location = "{file}:{line}:{function}"
         self._padding_location = 0  # column alignment
@@ -29,48 +30,6 @@ class LoggerWindow:
         self._win.scrollok(True)
         self._win.idlok(True)
         self._win.leaveok(False)
-
-        colors = {  # key=loguru color name, value=curses color
-            "black": curses.COLOR_BLACK,
-            "blue": curses.COLOR_BLUE,
-            "cyan": curses.COLOR_CYAN,
-            "green": curses.COLOR_GREEN,
-            "magenta": curses.COLOR_MAGENTA,
-            "red": curses.COLOR_RED,
-            "white": curses.COLOR_WHITE,
-            "yellow": curses.COLOR_YELLOW,
-        }
-
-        attrs = {  # key=loguru attr name, value=curses attr
-            "bold": curses.A_BOLD,
-            "dim": curses.A_DIM,
-            "normal": curses.A_NORMAL,
-            "hide": curses.A_INVIS,
-            "italic": curses.A_ITALIC,
-            "blink": curses.A_BLINK,
-            "strike": curses.A_HORIZONTAL,
-            "underline": curses.A_UNDERLINE,
-            "reverse": curses.A_REVERSE,
-        }
-
-        for idx, lvl in enumerate(logger._core.levels.values()):
-            fg = curses.COLOR_WHITE
-            bg = curses.COLOR_BLACK
-            attr = 0
-            for word in re.findall(r"[\w]+", lvl.color):
-                if word.islower() and (_ := colors.get(word)):
-                    fg = _
-                elif word.isupper() and (_ := colors.get(word.lower())):
-                    bg = _
-                elif _ := attrs.get(word):
-                    attr |= _
-
-            curses.init_pair(idx + 1, fg, bg)
-            self.__class__.colormap[lvl.name] = curses.color_pair(idx + 1) | attr
-            logger.trace(
-                f"name={lvl.name} color={lvl.color} idx={idx+1} fg={fg} bg={bg} "
-                f"color={self.colormap[lvl.name]} attr={attr:o}"
-            )
 
         #
         self._logger_id = None
@@ -89,7 +48,7 @@ class LoggerWindow:
         self._logger_id = logger.add(
             self._curses_sink,
             level=self._level_name,
-            format=self._gutter.join(
+            format=self._msg_delim.join(
                 [
                     "{time:HH:mm:ss.SSS}",
                     self._location,
@@ -121,8 +80,8 @@ class LoggerWindow:
 
     def _curses_sink(self, msg):
 
-        time, location, level, message = msg.split(self._gutter, maxsplit=3)
-        color = self.colormap[level]
+        time, location, level, message = msg.split(self._msg_delim, maxsplit=3)
+        color = self._colormap[level]
 
         w = len(location)
         self._padding_location = max(self._padding_location, w)
@@ -141,14 +100,14 @@ class LoggerWindow:
             if sum(self._win.getyx()):
                 self._win.addch("\n")
             self._win.addstr(time, color)
-            self._win.addch(curses.ACS_VLINE)
+            self._win.addch(self._display_delim)
 
             if location:
                 self._win.addstr(location, color)
-                self._win.addch(curses.ACS_VLINE)
+                self._win.addch(self._display_delim)
 
             self._win.addstr(level, color)
-            self._win.addch(curses.ACS_VLINE)
+            self._win.addch(self._display_delim)
             self._win.addstr(message.rstrip(), color)
             self._win.noutrefresh()
 

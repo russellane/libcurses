@@ -23,7 +23,7 @@ class ResizeMixin:
 
         if self._once:
             self.__class__._once = False
-            register_fkey(lambda key: self._handle_term_resized_event(), curses.KEY_RESIZE)
+            register_fkey(lambda key: self.handle_term_resized_event(), curses.KEY_RESIZE)
             Mouse.enable()
             Mouse.add_internal_mouse_handler(self._handle_mouse_event)
 
@@ -46,7 +46,7 @@ class ResizeMixin:
     def _mouse_max_x(self) -> int:
         return self.begin_x + self.ncols - 2
 
-    def _handle_term_resized_event(self):
+    def handle_term_resized_event(self):
         """Respond to terminal having been resized."""
 
         # pylint: disable=no-member
@@ -55,6 +55,7 @@ class ResizeMixin:
         self.win.resize(self.nlines, self.ncols)
         self.grid = [[0 for x in range(self.ncols)] for y in range(self.nlines)]
         self.attrs = [[0 for x in range(self.ncols)] for y in range(self.nlines)]
+        self.boxes = self.boxes[:1]
         if self._builder:
             self._builder()
         # self.redraw()

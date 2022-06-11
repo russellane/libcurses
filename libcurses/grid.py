@@ -356,12 +356,12 @@ class Grid(ResizeMixin):
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
 
-        logger.trace("-" * 80)
+        # logger.trace("-" * 80)
 
-        logger.trace(
-            f"boxname={boxname!r} nlines={nlines} ncols={ncols} "
-            f"begin_y={begin_y} begin_x={begin_x}"
-        )
+        # logger.trace(
+        #     f"boxname={boxname!r} nlines={nlines} ncols={ncols} "
+        #     f"begin_y={begin_y} begin_x={begin_x}"
+        # )
 
         # Determine dimensions/coordinates of upper-left corner of box on the grid.
 
@@ -395,10 +395,10 @@ class Grid(ResizeMixin):
             "right2l",
         )
 
-        logger.trace(
-            f"boxname={boxname!r} nlines={nlines} ncols={ncols} "
-            f"begin_y={begin_y} begin_x={begin_x}"
-        )
+        # logger.trace(
+        #     f"boxname={boxname!r} nlines={nlines} ncols={ncols} "
+        #     f"begin_y={begin_y} begin_x={begin_x}"
+        # )
         self._draw_box(nlines, ncols, begin_y, begin_x)
 
         # If this box is known, then resize (instead of creating) the window.
@@ -408,6 +408,7 @@ class Grid(ResizeMixin):
             win.resize(nlines - 2, ncols - 2)
             win.move(0, 0)
             win.mvwin(begin_y + 1, begin_x + 1)
+            self.boxes.append(win)
         else:
             # create window inside the box
             win = curses.newwin(nlines - 2, ncols - 2, begin_y + 1, begin_x + 1)
@@ -448,18 +449,17 @@ class Grid(ResizeMixin):
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
-        # pylint: disable=too-many-statements
 
         dimension = ["nlines", "ncols"][idx]
         meta = f"boxname={boxname!r}, dimension={dimension!r}"
 
-        logger.trace("-" * 80)
+        # logger.trace("-" * 80)
 
         # -------------------------------------------------------------------------------
 
         if not lo and not lo2hi and not hi and not hi2lo:
             # calling like curses.newwin()
-            logger.trace(f"{meta}, length={length} i_begin={i_begin}")
+            # logger.trace(f"{meta}, length={length} i_begin={i_begin}")
             return length, i_begin
 
         # -------------------------------------------------------------------------------
@@ -495,51 +495,51 @@ class Grid(ResizeMixin):
         if lo:
             if lo == self:
                 begin = self.win.getbegyx()[idx]
-                logger.trace(f"{meta}, begin={self.win.getbegyx()[idx]}")
+                # logger.trace(f"{meta}, begin={self.win.getbegyx()[idx]}")
             else:
                 begin = lo.getbegyx()[idx] - 1  # to reach the border
-                logger.trace(f"{meta}, begin={lo.getbegyx()[idx] - 1}")
+                # logger.trace(f"{meta}, begin={lo.getbegyx()[idx] - 1}")
         elif lo2hi:
             begin = lo2hi.getbegyx()[idx] + lo2hi.getmaxyx()[idx]
-            logger.trace(f"{meta}, begin={lo2hi.getbegyx()[idx]} + {lo2hi.getmaxyx()[idx]}")
+            # logger.trace(f"{meta}, begin={lo2hi.getbegyx()[idx]} + {lo2hi.getmaxyx()[idx]}")
         else:
             begin = None
-            logger.trace(f"{meta}, begin=None")
+            # logger.trace(f"{meta}, begin=None")
 
         # -------------------------------------------------------------------------------
 
         if hi:
             if hi == self:
                 last = self.win.getbegyx()[idx] + self.win.getmaxyx()[idx] - 1
-                logger.trace(
-                    f"{meta}, last={self.win.getbegyx()[idx]} + {self.win.getmaxyx()[idx]} - 1"
-                )
+                # logger.trace(
+                #     f"{meta}, last={self.win.getbegyx()[idx]} + {self.win.getmaxyx()[idx]} - 1"
+                # )
             else:
                 last = hi.getbegyx()[idx] + hi.getmaxyx()[idx]
-                logger.trace(f"{meta}, last={hi.getbegyx()[idx]} + {hi.getmaxyx()[idx]}")
+                # logger.trace(f"{meta}, last={hi.getbegyx()[idx]} + {hi.getmaxyx()[idx]}")
         elif hi2lo:
             last = hi2lo.getbegyx()[idx] - 1
-            logger.trace(f"{meta}, last={hi2lo.getbegyx()[idx]} - 1")
+            # logger.trace(f"{meta}, last={hi2lo.getbegyx()[idx]} - 1")
         else:
             last = None
-            logger.trace(f"{meta}, last=None")
+            # logger.trace(f"{meta}, last=None")
 
         # -------------------------------------------------------------------------------
 
         if None not in (begin, last):
             assert not length
             length = last - begin + 1
-            logger.trace(f"{meta}, length={length} = {last} - {begin}, begin={begin}")
+            # logger.trace(f"{meta}, length={length} = {last} - {begin}, begin={begin}")
             return length, i_begin + begin
 
         assert length
         if begin is not None:
-            logger.trace(f"{meta}, length={length}, begin={begin}")
+            # logger.trace(f"{meta}, length={length}, begin={begin}")
             return length, i_begin + begin
 
         assert last
         begin = last - length + 1
-        logger.trace(f"{meta}, length={length}, begin={begin}")
+        # logger.trace(f"{meta}, length={length}, begin={begin}")
         return length, i_begin + begin
 
     # -------------------------------------------------------------------------------

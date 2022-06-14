@@ -7,7 +7,7 @@ from loguru import logger
 
 import libcurses
 from libcurses.grid import Grid
-from libcurses.logwin import LoggerWindow
+from libcurses.logwin import LoggerSink
 from libcurses.menu import Menu, MenuItem
 
 
@@ -19,7 +19,7 @@ def test_stub():
 # interactive non-pytest tests below
 
 
-def get_test_menu(logwin: LoggerWindow) -> Menu:
+def get_test_menu(logwin: LoggerSink) -> Menu:
     """Create and return test `Menu` instance."""
 
     menu = Menu("Main menu", "Make your choice")
@@ -66,7 +66,7 @@ def main(win: curses.window):
 
     lower = grid.box("lower", 0, 0, left=grid, right=grid, top2b=upper, bottom=grid)
     lower.scrollok(True)
-    logwin = LoggerWindow(lower)
+    logwin = LoggerSink(lower)
     logwin.set_verbose(2)
 
     grid.redraw()

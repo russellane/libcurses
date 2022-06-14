@@ -40,14 +40,7 @@ class Menu:
         """Display menu on `win`, read keyboard, and return selected item."""
 
         while True:
-            win.clear()
-            win.move(0, 0)
-            win.addstr(self.title + "\n")
-            if self.subtitle:
-                win.addstr(self.subtitle + "\n")
-            for item in self.menuitems.values():
-                win.addstr(f"  {item.keyname:>{self.max_len_keyname}}: {item.text}\n")
-            win.addstr(self.instructions + ": ")
+            self.display(win)
 
             if not (key := getkey(win, no_mouse=True)):
                 return None
@@ -56,12 +49,29 @@ class Menu:
                 Mouse.handle_mouse_event()
                 continue
 
-            keyname = curses.keyname(key).decode()
-            win.addstr(keyname + "\n")
-            if item := self.menuitems.get(keyname):
+            if item := self.item_from_key(key):
                 return item
 
+    def display(self, win):
+        """Display menu on `win`."""
+
+        win.clear()
+        win.move(0, 0)
+        win.addstr(self.title + "\n")
+        if self.subtitle:
+            win.addstr(self.subtitle + "\n")
+        for item in self.menuitems.values():
+            win.addstr(f"  {item.keyname:>{self.max_len_keyname}}: {item.text}\n")
+        win.addstr(self.instructions + ": ")
+
+    def item_from_key(self, key: int):
+        """Return `MenuItem` associated with `key`, else None."""
+
+        keyname = curses.keyname(key).decode()
+        item = self.menuitems.get(keyname)
+        if not item:
             logger.error("invalid key {}={!r}", key, keyname)
+        return item
 
 
 class MenuItem:  # pylint: disable=too-few-public-methods

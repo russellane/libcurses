@@ -8,7 +8,7 @@ from queue import SimpleQueue
 
 from loguru import logger
 
-import libcurses
+from libcurses import Console, Grid, register_fkey, wrapper
 
 
 class Application:
@@ -58,7 +58,7 @@ class Application:
         )
 
         # Split screen horizontally into 2 panels.
-        self.grid = libcurses.Grid(stdscr)
+        self.grid = Grid(stdscr)
 
         # Upper panel: menu/prompt, command line input.
         self.mainwin = self.grid.box(
@@ -84,7 +84,7 @@ class Application:
         self.logwin.scrollok(True)
 
         # Start curses threading.
-        self.console = libcurses.Console(
+        self.console = Console(
             win=self.logwin,
             pre_block=self.pre_block,
             dispatch=self.dispatch,
@@ -93,30 +93,30 @@ class Application:
         # Add an application data feed.
         self.fruit_feed = FruitVendor(self.console.queue)
         # speed control
-        libcurses.register_fkey(self.fruit_feed.next_timer, curses.KEY_F1)
+        register_fkey(self.fruit_feed.next_timer, curses.KEY_F1)
         # debug control
-        libcurses.register_fkey(self.fruit_feed.toggle_debug, curses.KEY_F2)
+        register_fkey(self.fruit_feed.toggle_debug, curses.KEY_F2)
 
         # Add another application data feed.
         self.animal_feed = AnimalFarm(self.console.queue)
-        libcurses.register_fkey(self.animal_feed.next_timer, curses.KEY_F3)
-        libcurses.register_fkey(self.animal_feed.toggle_debug, curses.KEY_F4)
+        register_fkey(self.animal_feed.next_timer, curses.KEY_F3)
+        register_fkey(self.animal_feed.toggle_debug, curses.KEY_F4)
 
         # Application controls.
         self.dispatch_info = False
-        libcurses.register_fkey(lambda key: self.toggle_dispatch_info(), curses.KEY_F5)
+        register_fkey(lambda key: self.toggle_dispatch_info(), curses.KEY_F5)
 
         # Library controls.
-        libcurses.register_fkey(self.console.toggle_debug, curses.KEY_F7)
+        register_fkey(self.console.toggle_debug, curses.KEY_F7)
 
         self.console.sink.set_location(next(self.location))
-        libcurses.register_fkey(
+        register_fkey(
             lambda key: self.console.sink.set_location(next(self.location)),
             curses.KEY_F8,
         )
 
         self.console.sink.set_verbose(next(self.verbose))
-        libcurses.register_fkey(
+        register_fkey(
             lambda key: self.console.sink.set_verbose(next(self.verbose)),
             curses.KEY_F9,
         )
@@ -208,14 +208,14 @@ class FruitVendor:
                 logger.trace(msg)
 
     def next_timer(self, key: int) -> None:
-        """Change `timer`; signature per `libcurses.register_fkey`."""
+        """Change `timer`; signature per `register_fkey`."""
 
         self.timer = next(self.timers)
         if self.debug:
             logger.success(f"key={key} timer={self.timer}")
 
     def toggle_debug(self, key: int) -> None:
-        """Change `debug`; signature per `libcurses.register_fkey`."""
+        """Change `debug`; signature per `register_fkey`."""
 
         self.debug = not self.debug
         if self.debug:
@@ -258,14 +258,14 @@ class AnimalFarm:
                 logger.trace(msg)
 
     def next_timer(self, key: int) -> None:
-        """Change `timer`; signature per `libcurses.register_fkey`."""
+        """Change `timer`; signature per `register_fkey`."""
 
         self.timer = next(self.timers)
         if self.debug:
             logger.success(f"key={key} timer={self.timer}")
 
     def toggle_debug(self, key: int) -> None:
-        """Change `debug`; signature per `libcurses.register_fkey`."""
+        """Change `debug`; signature per `register_fkey`."""
 
         self.debug = not self.debug
         if self.debug:
@@ -277,4 +277,4 @@ def test_stub():
 
 
 if __name__ == "__main__":
-    libcurses.wrapper(lambda stdscr: Application(stdscr).main())
+    wrapper(lambda stdscr: Application(stdscr).main())

@@ -13,43 +13,43 @@ class LoggerSink:
     def __init__(self, queue: SimpleQueue):
         """Logger sink to curses.
 
-        Forward logger messages through a `SimpleQueue` to a curses-worker.
+        Forward logger messages through `queue` to our partner who then
+        updates the curses display.
         """
 
-        self._queue = queue
+        self.queue = queue
+        self.location = "{name}.{function}:{line}"
+        self.verbose = 0
         self._level_name = "INFO"
-        self._delim = "|"
-        self._location = "{file}:{line}:{function}"
-        self._logger_id = None
-        self._init_sink()
+        self._id = None
+        #
+        self.configure()
 
-        # for use by the curses-worker only
-        # self.win = None
+    def configure(self) -> None:
+        """Configure the logger."""
 
-    def _init_sink(self) -> None:
-
-        if self._logger_id is not None:
+        if self._id is not None:
             # Loguru can't actually change the format of an active logger;
             # remove and recreate.
-            logger.trace(f"remove _logger_id {self._logger_id}")
-            logger.remove(self._logger_id)
+            logger.trace(f"remove logger {self._id}")
+            logger.remove(self._id)
 
-        self._logger_id = logger.add(
-            lambda msg: self._queue.put(
+        self._id = logger.add(
+            lambda msg: self.queue.put(
                 (libcurses.ConsoleMessageType.LOGGER.value, msg.record["level"].name, msg)
             ),
             level=self._level_name,
-            format=self._delim.join(
+            format="|".join(
                 [
                     "{time:HH:mm:ss.SSS}",
-                    self._location,
+                    self.location,
                     "{level}",
                     "{message}{exception}",
                 ]
             ),
         )
 
-        logger.trace(f"add _logger_id {self._logger_id} _location {self._location!r}")
+        logger.trace(f"add logger {self._id} location {self.location!r}")
 
     def set_location(self, location) -> None:
         """Set the location format.
@@ -59,12 +59,17 @@ class LoggerSink:
                         message. For example, "{thread.name}:{file}:{line}:{function}".
         """
 
-        self._location = location if location is not None else ""
-        self._init_sink()
+        self.location = location if location is not None else ""
+        self.configure()
+
+        logger.trace(f"update location={self.location!r}")
 
     def set_verbose(self, verbose: int) -> None:
         """Set logging level based on `--verbose`."""
 
+        self.verbose = verbose
         _ = ["INFO", "DEBUG", "TRACE"]
         self._level_name = _[min(verbose, len(_) - 1)]
-        self._init_sink()
+        self.configure()
+
+        logger.trace(f"update verbose={self._level_name!r}")

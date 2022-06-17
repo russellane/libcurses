@@ -49,6 +49,7 @@ class ResizeMixin:
     def handle_term_resized_event(self):
         """Respond to terminal having been resized."""
 
+        curses.update_lines_cols()
         # pylint: disable=no-member
         logger.warning(f"old={self.nlines}x{self.ncols} new={curses.LINES}x{curses.COLS}")
         self.nlines, self.ncols = curses.LINES, curses.COLS

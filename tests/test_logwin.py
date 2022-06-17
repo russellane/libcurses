@@ -7,7 +7,7 @@ from loguru import logger
 
 import libcurses
 from libcurses.grid import Grid
-from libcurses.logwin import LoggerSink
+from libcurses.loggersink import LoggerSink
 from libcurses.menu import Menu, MenuItem
 
 

@@ -65,7 +65,7 @@ class Console:
         # Start thread to read keyboard/mouse from `win` and forward
         # each character read to application.
 
-        name = ConsoleMessageType.GETCH.value
+        msgtype = ConsoleMessageType.GETCH.value
 
         def _getch() -> None:
 
@@ -73,11 +73,11 @@ class Console:
             while True:
                 # This is the only caller of `getch`; others are prohibited.
                 char = self.win.getch()
-                self.queue.put((name, char))
+                self.queue.put((msgtype, char))
                 if char < 0:
                     return
 
-        threading.Thread(target=_getch, name=name, daemon=True).start()
+        threading.Thread(target=_getch, name=msgtype, daemon=True).start()
 
     def getline(self) -> str:
         """Generate lines read (blocking) from the console."""
@@ -105,13 +105,13 @@ class Console:
 
             # Dispatch.
 
-            if msgtype == libcurses.ConsoleMessageType.LOGGER.value:
+            if msgtype == ConsoleMessageType.LOGGER.value:
                 (level, msg) = args
                 color = self.colormap[level]
                 self.win.addstr(msg, color)
                 continue
 
-            if msgtype != libcurses.ConsoleMessageType.GETCH.value:
+            if msgtype != ConsoleMessageType.GETCH.value:
                 self.dispatch(msgtype, *args)
                 continue
 

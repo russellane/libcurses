@@ -4,17 +4,19 @@ from queue import SimpleQueue
 
 from loguru import logger
 
-import libcurses
+from libcurses.console import ConsoleMessageType
 
 
 class LoggerSink:
     """Logger sink to curses."""
 
+    msgtype = ConsoleMessageType.LOGGER.value
+
     def __init__(self, queue: SimpleQueue):
         """Logger sink to curses.
 
-        Forward logger messages through `queue` to our partner who then
-        updates the curses display.
+        Forward logger messages through `queue` to main-thread;
+        main-thread will `dispatch` to handler that writes to curses.
         """
 
         self.queue = queue
@@ -35,9 +37,7 @@ class LoggerSink:
             logger.remove(self._id)
 
         self._id = logger.add(
-            lambda msg: self.queue.put(
-                (libcurses.ConsoleMessageType.LOGGER.value, msg.record["level"].name, msg)
-            ),
+            lambda msg: self.queue.put((self.msgtype, msg.record["level"].name, msg)),
             level=self._level_name,
             format="|".join(
                 [

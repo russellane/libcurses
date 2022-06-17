@@ -102,21 +102,19 @@ class Application:
         libcurses.register_fkey(self.animal_feed.next_timer, curses.KEY_F3)
         libcurses.register_fkey(self.animal_feed.toggle_debug, curses.KEY_F4)
 
-        # Control console debug.
-        libcurses.register_fkey(self.console.toggle_debug, curses.KEY_F6)
+        # Application controls.
+        self.dispatch_info = False
+        libcurses.register_fkey(lambda key: self.toggle_dispatch_info(), curses.KEY_F5)
 
-        # Control dispatch_debug.
-        self.dispatch_debug = False
-        libcurses.register_fkey(lambda key: self.toggle_debug_receiver(), curses.KEY_F7)
+        # Library controls.
+        libcurses.register_fkey(self.console.toggle_debug, curses.KEY_F7)
 
-        # Control location.
         self.console.sink.set_location(next(self.location))
         libcurses.register_fkey(
             lambda key: self.console.sink.set_location(next(self.location)),
             curses.KEY_F8,
         )
 
-        # Control verbose.
         self.console.sink.set_verbose(next(self.verbose))
         libcurses.register_fkey(
             lambda key: self.console.sink.set_verbose(next(self.verbose)),
@@ -125,9 +123,9 @@ class Application:
 
         self.grid.redraw()
 
-    def toggle_debug_receiver(self) -> None:
+    def toggle_dispatch_info(self) -> None:
         """Toggle control."""
-        self.dispatch_debug = not self.dispatch_debug
+        self.dispatch_info = not self.dispatch_info
 
     def main(self):
         """Docstring."""
@@ -150,8 +148,8 @@ class Application:
         self.mainwin.addstr(f"F2 Fruit debug: {self.fruit_feed.debug}\n")
         self.mainwin.addstr(f"F3 Animal Speed: {self.animal_feed.timer}\n")
         self.mainwin.addstr(f"F4 Animal debug: {self.animal_feed.debug}\n")
-        self.mainwin.addstr(f"F6 Console debug: {self.console.debug}\n")
-        self.mainwin.addstr(f"F7 Dispatch debug: {self.dispatch_debug}\n")
+        self.mainwin.addstr(f"F5 Dispatch info: {self.dispatch_info}\n")
+        self.mainwin.addstr(f"F7 Console debug: {self.console.debug}\n")
         self.mainwin.addstr(f"F8 Location: {self.console.sink.location!r}\n")
         self.mainwin.addstr(f"F9 Verbose: {self.console.sink.verbose}\n")
         self.mainwin.addstr(f"Lastline: {self.lastline!r}\n")
@@ -160,8 +158,8 @@ class Application:
 
     def dispatch(self, msgtype: str, *args) -> None:
 
-        if self.dispatch_debug:
-            logger.trace(f"msgtype={msgtype!r} args={args!r}")
+        if self.dispatch_info:
+            logger.info(f"msgtype={msgtype!r} args={args!r}")
 
         if msgtype == "FRUIT":
             (fruit,) = args

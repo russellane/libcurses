@@ -85,7 +85,7 @@ class Application:
 
         # Start curses threading.
         self.console = Console(
-            win=self.logwin,
+            logwin=self.logwin,
             pre_block=self.pre_block,
             dispatch=self.dispatch,
         )
@@ -109,15 +109,15 @@ class Application:
         # Library controls.
         register_fkey(self.console.toggle_debug, curses.KEY_F7)
 
-        self.console.sink.set_location(next(self.location))
+        self.console.set_location(next(self.location))
         register_fkey(
-            lambda key: self.console.sink.set_location(next(self.location)),
+            lambda key: self.console.set_location(next(self.location)),
             curses.KEY_F8,
         )
 
-        self.console.sink.set_verbose(next(self.verbose))
+        self.console.set_verbose(next(self.verbose))
         register_fkey(
-            lambda key: self.console.sink.set_verbose(next(self.verbose)),
+            lambda key: self.console.set_verbose(next(self.verbose)),
             curses.KEY_F9,
         )
 
@@ -131,9 +131,9 @@ class Application:
         """Docstring."""
 
         # REPL
-        for line in self.console.getline():
+        for msgtype, lineno, line in self.console.get_msgtype_lineno_line():
             # Work...
-            logger.log("GETLINE", f"line={line!r}")
+            logger.log("GETLINE", f"msgtype={msgtype} lineno={lineno} line={line!r}")
             if line and "quit".find(line) == 0:
                 break
             self.lastline = line
@@ -150,8 +150,8 @@ class Application:
         self.mainwin.addstr(f"F4 Animal debug: {self.animal_feed.debug}\n")
         self.mainwin.addstr(f"F5 Dispatch info: {self.dispatch_info}\n")
         self.mainwin.addstr(f"F7 Console debug: {self.console.debug}\n")
-        self.mainwin.addstr(f"F8 Location: {self.console.sink.location!r}\n")
-        self.mainwin.addstr(f"F9 Verbose: {self.console.sink.verbose}\n")
+        self.mainwin.addstr(f"F8 Location: {self.console.location!r}\n")
+        self.mainwin.addstr(f"F9 Verbose: {self.console.verbose}\n")
         self.mainwin.addstr(f"Lastline: {self.lastline!r}\n")
         self.mainwin.addstr("Enter command: " + line)
         self.mainwin.refresh()
@@ -193,11 +193,11 @@ class FruitVendor:
     def work(self) -> None:
         """Produce a fruit every 'x' seconds."""
 
-        while True:
+        for seq in itertools.count(start=1):
             time.sleep(self.timer)
             fruit = next(self.fruits)
             msg = f"{fruit} after {self.timer} seconds."
-            self.queue.put((self.name, msg))
+            self.queue.put((self.name, seq, msg))
 
             if self.debug:
                 msg = fruit.center(30, "-")
@@ -243,11 +243,11 @@ class AnimalFarm:
     def work(self) -> None:
         """Produce an animal every 'x' seconds."""
 
-        while True:
+        for seq in itertools.count(start=1):
             time.sleep(self.timer)
             animal = next(self.animals)
             msg = f"{animal} after {self.timer} seconds."
-            self.queue.put((self.name, msg))
+            self.queue.put((self.name, seq, msg))
 
             if self.debug:
                 msg = animal.rjust(30, "-")

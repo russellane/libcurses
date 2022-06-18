@@ -5,37 +5,48 @@ import threading
 from enum import Enum
 from queue import SimpleQueue
 
+from loguru import logger
+
 import libcurses
 
 
 class ConsoleMessageType(Enum):
-    """Types of messages forwarded by `Console` through `SimpleQueue` to application."""
+    """Types of messages sent through `SimpleQueue` to application."""
 
     GETCH = "getch"  # single character (`int`) read from curses.
+    GETLINE = "getline"  # line (`str`) read from curses.
     LOGGER = "logger"  # logger message to be displayed by curses.
+
+
+GETCH = ConsoleMessageType.GETCH.value
+GETLINE = ConsoleMessageType.GETLINE.value
+LOGGER = ConsoleMessageType.LOGGER.value
+
+# ConsoleMessage = namedtuple("conmsg", "msgtype seq data")
 
 
 class Console:
     """Docstring."""
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
-        win: curses.window,
+        logwin: curses.window,
         pre_block,
         dispatch,
         queue: SimpleQueue = None,
-        debug: bool = False,
     ) -> None:
         """Start thread to read keyboard/mouse and push characters to application."""
 
-        self.win = win
+        # Only `main_thread` may use `logwin`; others are prohibited.
+        self.main_thread = threading.current_thread()
+        self.logwin = logwin
+        self.logwin.keypad(True)
 
         # Callback to application to flush curses output; or whatever it
         # wants to do with this iteration through the REPL, top of loop,
         # before waiting for next char from console.
-
         # called before reading each character.
         # this generates keystroke events; getch
         # _hook_getch?
@@ -53,65 +64,132 @@ class Console:
         #
         self.colormap = libcurses.get_colormap()
 
-        # Worker-threads funnel work-orders to the main-thread.
+        # Workers send messages to `main_thread`.
         self.queue = queue or SimpleQueue()
 
         #
-        self.debug = debug
+        self.lineno = 0
+        self.debug = False
 
-        # Configure logger to forward messages to main-thread.
-        self.sink = libcurses.LoggerSink(self.queue)
+        # Configure logger.
+        self.location = "{name}.{function}:{line}"
+        self.verbose = 0
+        self._level_name = "INFO"
+        self._id = None
+        self._config()
 
-        # Start thread to read keyboard/mouse from `win` and forward
-        # each character read to application.
+        # Start thread to loop over `logwin.getch()` forwarding each
+        # character to the REPL input generator `get_msgtype_lineno_line`.
+        threading.Thread(target=self.getch, name=GETCH, daemon=True).start()
 
-        msgtype = ConsoleMessageType.GETCH.value
+        # REPL
+        # >>>  for msgtype, lineno, line in console.get_msgtype_lineno_line:
+        # >>>      print(line)
 
-        def _getch() -> None:
+    def getch(self) -> None:
+        """Forward keyboard/mouse characters to `get_msgtype_lineno_line`."""
 
-            self.win.keypad(True)
-            while True:
-                # This is the only caller of `getch`; others are prohibited.
-                char = self.win.getch()
-                self.queue.put((msgtype, char))
-                if char < 0:
-                    return
+        while True:
+            # This is the only caller of `getch`; others are prohibited.
+            char = self.logwin.getch()
+            self.queue.put((GETCH, 0, char))
+            if char < 0:
+                return
 
-        threading.Thread(target=_getch, name=msgtype, daemon=True).start()
+    def _config(self) -> None:
 
-    def getline(self) -> str:
-        """Generate lines read (blocking) from the console."""
+        if self._id is not None:
+            # Loguru can't actually change the format of an active logger;
+            # remove and recreate.
+            logger.trace(f"remove logger {self._id}")
+            logger.remove(self._id)
+
+        self._id = logger.add(
+            self._sink,
+            level=self._level_name,
+            format="|".join(
+                [
+                    "{time:HH:mm:ss.SSS}",
+                    self.location,
+                    "{level}",
+                    "{message}{exception}",
+                ]
+            ),
+        )
+
+        logger.trace(f"add logger {self._id} location {self.location!r}")
+
+    def _sink(self, msg) -> None:
+
+        level = msg.record["level"].name
+
+        if self.main_thread == threading.current_thread():
+            color = self.colormap[level]
+            self.logwin.addstr(msg, color)
+            self.logwin.refresh()
+        else:
+            self.queue.put((LOGGER, 0, level, msg))
+
+    def set_location(self, location) -> None:
+        """Set format of `location` field."""
+
+        self.location = location if location is not None else ""
+        self._config()
+        logger.trace(f"update location={self.location!r}")
+
+    def set_verbose(self, verbose: int) -> None:
+        """Set logging level based on `--verbose`."""
+
+        self.verbose = verbose
+        #   ["",     "-v",    "-vv"]
+        _ = ["INFO", "DEBUG", "TRACE"]
+        self._level_name = _[min(verbose, len(_) - 1)]
+        self._config()
+        logger.trace(f"update verbose={self._level_name!r}")
+
+    def get_msgtype_lineno_line(self) -> str:
+        """Yield messages from console and application feeds.
+
+        Thread `self._getch` puts GETCH messages onto the queue.
+        We buffer chars until ENTER, then yield msgtype GETLINE.
+
+        Application feeds also put messages onto this queue, which we simply forward.
+
+        We intercept the `LOGGER` feed and write directly to curses `logwin`;
+        might be better to simply forward it... then maybe this doesn't
+        need `logwin` at all?
+
+        """
 
         # pylint: disable=too-many-branches
 
-        tag = f"{__name__}.getline:"
         _line = ""  # collect keys until Enter.
 
         while True:
-            # logger.debug("do no call logger.debug, et. al. here")
 
+            # Flush output, redisplay prompt, ...
             self.pre_block(_line)
 
-            # Wait for keystroke.
+            # Wait for keystroke... or other msgtype
             try:
-                (msgtype, *args) = self.queue.get()
+                (msgtype, seq, *args) = self.queue.get()
             except KeyboardInterrupt as err:
-                if self.debug:
-                    self.win.addstr(f"{tag} err={err}\n")
+                logger.info(repr(err))
                 return
 
             if self.debug:
-                self.win.addstr(f"{tag} msgtype={msgtype!r} args={args!r}\n")
+                logger.trace("msgtype {} seq {} args {}", msgtype, seq, args)
 
             # Dispatch.
 
             if msgtype == ConsoleMessageType.LOGGER.value:
                 (level, msg) = args
                 color = self.colormap[level]
-                self.win.addstr(msg, color)
+                self.logwin.addstr(msg, color)
                 continue
 
             if msgtype != ConsoleMessageType.GETCH.value:
+                # yield msgtype, seq, *args
                 self.dispatch(msgtype, *args)
                 continue
 
@@ -126,14 +204,15 @@ class Console:
 
             keyname = curses.keyname(key).decode()
             if self.debug:
-                self.win.addstr(f"{tag} key={key} keyname={keyname!r}\n")
+                logger.trace("key {} keyname {}", key, keyname)
 
             if key == curses.ascii.EOT:
-                self.win.addstr(keyname + "\n")
+                logger.info(keyname)
                 return
 
             if key in (curses.ascii.LF, curses.ascii.CR, curses.KEY_ENTER):
-                yield _line
+                self.lineno += 1
+                yield GETLINE, self.lineno, _line
                 _line = ""
 
             elif key == curses.ascii.BS:
@@ -147,11 +226,11 @@ class Console:
                 _line += chr(key)
 
             elif not libcurses.is_fkey(key) and self.debug:
-                self.win.addstr(f"{tag} Unhandled key={key} keyname={keyname}\n")
+                logger.trace("Unhandled key {} keyname {}", key, keyname)
 
     def toggle_debug(self, key: int) -> None:
         """Change `debug`; signature per `libcurses.register_fkey`."""
 
         self.debug = not self.debug
         if self.debug:
-            self.win.addstr(f"key={key} debug={self.debug}\n")
+            logger.trace("key {} debug {}", key, self.debug)

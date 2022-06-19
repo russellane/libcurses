@@ -2,22 +2,30 @@
 
 import curses
 import itertools
-import threading
-import time
-from queue import SimpleQueue
+import sys
 
 from loguru import logger
 
 from libcurses import Console, Grid, register_fkey, wrapper
+from tests.feeds.file import FileFeed
+from tests.feeds.letter import LetterFeed
+from tests.feeds.number import NumberFeed
+
+try:
+    logger.remove(0)
+except ValueError:
+    ...
+logger.add(sys.stderr, format="{level} {function} {line} {message}", level="TRACE")
 
 
 class Application:
     """Example multi-threaded curses application.
 
-    Process data from 3 inputs:
+    Process data from 4 inputs:
         1. Lines ENTER'ed into the keyboard.
-        2. Fruit from a FruitVendor.
-        3. Animals from an AnimalFarm.
+        2. Lines tailing a file.
+        3. Letters from a LetterFeed.
+        4. Numbers from a NumberFeed.
 
     Also binds some function-keys to control the feeds.
     """
@@ -39,8 +47,9 @@ class Application:
         # _trace = logger.level("TRACE").no
         _always = _warn
         logger.level("GETLINE", no=_always, color="<cyan>")
-        logger.level("FRUIT", no=_always, color="<green>")
-        logger.level("ANIMAL", no=_always, color="<yellow>")
+        logger.level("FILE", no=_always, color="<blue>")
+        logger.level("LETTER", no=_always, color="<yellow>")
+        logger.level("NUMBER", no=_always, color="<green>")
 
         # Application data here...
         self.lastline = None  # for menu to display last line entered.
@@ -91,16 +100,24 @@ class Application:
         )
 
         # Add an application data feed.
-        self.fruit_feed = FruitVendor(self.console.queue)
+        self.numbers = NumberFeed(self.console.queue)
         # speed control
-        register_fkey(self.fruit_feed.next_timer, curses.KEY_F1)
+        register_fkey(self.numbers.next_timer, curses.KEY_F1)
         # debug control
-        register_fkey(self.fruit_feed.toggle_debug, curses.KEY_F2)
+        register_fkey(self.numbers.toggle_debug, curses.KEY_F2)
 
         # Add another application data feed.
-        self.animal_feed = AnimalFarm(self.console.queue)
-        register_fkey(self.animal_feed.next_timer, curses.KEY_F3)
-        register_fkey(self.animal_feed.toggle_debug, curses.KEY_F4)
+        self.letters = LetterFeed(self.console.queue)
+        register_fkey(self.letters.next_timer, curses.KEY_F3)
+        register_fkey(self.letters.toggle_debug, curses.KEY_F4)
+
+        # Add another application data feed.
+        # self.filefeed = FileFeed(self.console.queue, "3lines", rewind=True, follow=False)
+        # self.filefeed = FileFeed(self.console.queue, "/etc/passwd", rewind=True, follow=False)
+        # self.filefeed = FileFeed(self.console.queue, "/etc/passwd", rewind=True, follow=True)
+        # self.filefeed = FileFeed(self.console.queue,
+        #   "/var/log/syslog", rewind=True, follow=False)
+        self.filefeed = FileFeed(self.console.queue, "/var/log/syslog", rewind=True, follow=True)
 
         # Application controls.
         self.dispatch_info = False
@@ -133,7 +150,8 @@ class Application:
         # REPL
         for msgtype, lineno, line in self.console.get_msgtype_lineno_line():
             # Work...
-            logger.log("GETLINE", f"msgtype={msgtype} lineno={lineno} line={line!r}")
+            # logger.log("GETLINE", f"msgtype={msgtype} lineno={lineno} line={line!r}")
+            logger.log(msgtype, f"msgtype={msgtype} lineno={lineno} line={line!r}")
             if line and "quit".find(line) == 0:
                 break
             self.lastline = line
@@ -144,12 +162,12 @@ class Application:
         self.logwin.refresh()
         self.mainwin.clear()
         self.mainwin.move(0, 0)
-        self.mainwin.addstr(f"F1 Fruit Speed: {self.fruit_feed.timer}\n")
-        self.mainwin.addstr(f"F2 Fruit debug: {self.fruit_feed.debug}\n")
-        self.mainwin.addstr(f"F3 Animal Speed: {self.animal_feed.timer}\n")
-        self.mainwin.addstr(f"F4 Animal debug: {self.animal_feed.debug}\n")
-        self.mainwin.addstr(f"F5 Dispatch info: {self.dispatch_info}\n")
-        self.mainwin.addstr(f"F7 Console debug: {self.console.debug}\n")
+        self.mainwin.addstr(f"F1 Numbers: speed: {self.numbers.timer}\n")
+        self.mainwin.addstr(f"F2 Numbers: debug: {self.numbers.debug}\n")
+        self.mainwin.addstr(f"F3 Letters: speed: {self.letters.timer}\n")
+        self.mainwin.addstr(f"F4 Numbers: debug: {self.letters.debug}\n")
+        self.mainwin.addstr(f"F5 Dispatch Info: {self.dispatch_info}\n")
+        self.mainwin.addstr(f"F7 Console Debug: {self.console.debug}\n")
         self.mainwin.addstr(f"F8 Location: {self.console.location!r}\n")
         self.mainwin.addstr(f"F9 Verbose: {self.console.verbose}\n")
         self.mainwin.addstr(f"Lastline: {self.lastline!r}\n")
@@ -161,115 +179,23 @@ class Application:
         if self.dispatch_info:
             logger.info(f"msgtype={msgtype!r} args={args!r}")
 
-        if msgtype == "FRUIT":
-            (fruit,) = args
-            logger.log(msgtype, fruit)
-            return
+        # if msgtype == "LETTER":
+        #     (lineno, letter) = args
+        #     logger.log(msgtype, letter)
+        #     return
 
-        if msgtype == "ANIMAL":
-            (animal,) = args
-            logger.log(msgtype, animal)
-            return
+        # if msgtype == "NUMBER":
+        #     (lineno, number) = args
+        #     logger.log(msgtype, number)
+        #     return
+
+        # if msgtype == "FILE":
+        #     (lineno, line) = args
+        #     print(f"msgtype {msgtype} lineno {lineno} line {line}")
+        #     # logger.log(msgtype, line)
+        #     return
 
         raise ValueError(f"invalid msgtype={msgtype!r} args={args!r}")
-
-
-class FruitVendor:
-    """Deliver a fruit every 'x' seconds."""
-
-    name = "FRUIT"
-    fruits = itertools.cycle(["11111-APPLE", "22222-BANANA", "33333-ORANGE"])
-    timers = itertools.cycle([3, 2, 1])
-
-    def __init__(self, queue: SimpleQueue):
-        """Produce a fruit every 'x' seconds."""
-
-        self.queue = queue
-        self.debug = False
-        self.timer = None
-        self.next_timer(None)
-        threading.Thread(target=self.work, name=self.name, daemon=True).start()
-
-    def work(self) -> None:
-        """Produce a fruit every 'x' seconds."""
-
-        for seq in itertools.count(start=1):
-            time.sleep(self.timer)
-            fruit = next(self.fruits)
-            msg = f"{fruit} after {self.timer} seconds."
-            self.queue.put((self.name, seq, msg))
-
-            if self.debug:
-                msg = fruit.center(30, "-")
-                logger.error(msg)
-                logger.warning(msg)
-                logger.info(msg)
-                logger.debug(msg)
-                logger.trace(msg)
-
-    def next_timer(self, key: int) -> None:
-        """Change `timer`; signature per `register_fkey`."""
-
-        self.timer = next(self.timers)
-        if self.debug:
-            logger.success(f"key={key} timer={self.timer}")
-
-    def toggle_debug(self, key: int) -> None:
-        """Change `debug`; signature per `register_fkey`."""
-
-        self.debug = not self.debug
-        if self.debug:
-            logger.success(f"key={key} debug={self.debug}")
-
-
-class AnimalFarm:
-    """Produce an animal every 'x' seconds."""
-
-    name = "ANIMAL"
-    animals = itertools.cycle(
-        ["11111-CAT", "22222-DOG", "33333-HORSE", "44444-LION", "55555-ZEBRA"]
-    )
-    timers = itertools.cycle([3, 2, 1])
-
-    def __init__(self, queue: SimpleQueue):
-        """Produce an animal every 'x' seconds."""
-
-        self.queue = queue
-        self.debug = False
-        self.timer = None
-        self.next_timer(None)
-        threading.Thread(target=self.work, name=self.name, daemon=True).start()
-
-    def work(self) -> None:
-        """Produce an animal every 'x' seconds."""
-
-        for seq in itertools.count(start=1):
-            time.sleep(self.timer)
-            animal = next(self.animals)
-            msg = f"{animal} after {self.timer} seconds."
-            self.queue.put((self.name, seq, msg))
-
-            if self.debug:
-                msg = animal.rjust(30, "-")
-                logger.error(msg)
-                logger.warning(msg)
-                logger.info(msg)
-                logger.debug(msg)
-                logger.trace(msg)
-
-    def next_timer(self, key: int) -> None:
-        """Change `timer`; signature per `register_fkey`."""
-
-        self.timer = next(self.timers)
-        if self.debug:
-            logger.success(f"key={key} timer={self.timer}")
-
-    def toggle_debug(self, key: int) -> None:
-        """Change `debug`; signature per `register_fkey`."""
-
-        self.debug = not self.debug
-        if self.debug:
-            logger.success(f"key={key} debug={self.debug}")
 
 
 def test_stub():

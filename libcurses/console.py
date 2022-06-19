@@ -33,7 +33,7 @@ class Console:
     def __init__(
         self,
         logwin: curses.window,
-        pre_block,
+        refresh,
         dispatch,
         queue: SimpleQueue = None,
     ) -> None:
@@ -52,7 +52,7 @@ class Console:
         # _hook_getch?
         # prompt?
         # getline/gotline?
-        self.pre_block = pre_block
+        self.refresh = refresh
 
         # application hook to process result of `getline`.
         # called after reading an ENTER character.
@@ -168,7 +168,7 @@ class Console:
         while True:
 
             # Flush output, redisplay prompt, ...
-            self.pre_block(_line)
+            self.refresh(_line)
 
             # Wait for keystroke... or other msgtype
             try:
@@ -189,8 +189,7 @@ class Console:
                 continue
 
             if msgtype != ConsoleMessageType.GETCH.value:
-                # yield msgtype, seq, *args
-                self.dispatch(msgtype, *args)
+                yield msgtype, seq, *args
                 continue
 
             (key,) = args

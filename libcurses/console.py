@@ -13,9 +13,9 @@ import libcurses
 class ConsoleMessageType(Enum):
     """Types of messages sent through `SimpleQueue` to application."""
 
-    GETCH = "getch"  # single character (`int`) read from curses.
-    GETLINE = "getline"  # line (`str`) read from curses.
-    LOGGER = "logger"  # logger message to be displayed by curses.
+    GETCH = "GETCH"  # single character (`int`) read from curses.
+    GETLINE = "GETLINE"  # line (`str`) read from curses.
+    LOGGER = "LOGGER"  # logger message to be displayed by curses.
 
 
 GETCH = ConsoleMessageType.GETCH.value
@@ -34,7 +34,6 @@ class Console:
         self,
         logwin: curses.window,
         refresh,
-        dispatch,
         queue: SimpleQueue = None,
     ) -> None:
         """Start thread to read keyboard/mouse and push characters to application."""
@@ -44,25 +43,10 @@ class Console:
         self.logwin = logwin
         self.logwin.keypad(True)
 
-        # Callback to application to flush curses output; or whatever it
-        # wants to do with this iteration through the REPL, top of loop,
-        # before waiting for next char from console.
-        # called before reading each character.
-        # this generates keystroke events; getch
-        # _hook_getch?
-        # prompt?
-        # getline/gotline?
+        # Callback before reading each character during GETLINE, passed the
+        # current value of the LINE as it's being entered. Application
+        # should redisplay prompt, LINE, and refresh curses.
         self.refresh = refresh
-
-        # application hook to process result of `getline`.
-        # called after reading an ENTER character.
-        # this generates line events; getline
-        # _hook_getline?
-        # getline/gotline?
-        self.dispatch = dispatch
-
-        #
-        self.colormap = libcurses.get_colormap()
 
         # Workers send messages to `main_thread`.
         self.queue = queue or SimpleQueue()
@@ -70,6 +54,7 @@ class Console:
         #
         self.lineno = 0
         self.debug = False
+        self.colormap = libcurses.get_colormap()
 
         # Configure logger.
         self.location = "{name}.{function}:{line}"
@@ -148,20 +133,11 @@ class Console:
         logger.trace(f"update verbose={self._level_name!r}")
 
     def get_msgtype_lineno_line(self) -> str:
-        """Yield messages from console and application feeds.
-
-        Thread `self._getch` puts GETCH messages onto the queue.
-        We buffer chars until ENTER, then yield msgtype GETLINE.
-
-        Application feeds also put messages onto this queue, which we simply forward.
-
-        We intercept the `LOGGER` feed and write directly to curses `logwin`;
-        might be better to simply forward it... then maybe this doesn't
-        need `logwin` at all?
-
-        """
+        """Yield messages from console and application feeds."""
 
         # pylint: disable=too-many-branches
+
+        assert threading.current_thread() == self.main_thread
 
         _line = ""  # collect keys until Enter.
 
@@ -180,18 +156,20 @@ class Console:
             if self.debug:
                 logger.trace("msgtype {} seq {} args {}", msgtype, seq, args)
 
-            # Dispatch.
-
+            # Handle LOGGER message.
             if msgtype == ConsoleMessageType.LOGGER.value:
                 (level, msg) = args
                 color = self.colormap[level]
                 self.logwin.addstr(msg, color)
+                self.logwin.refresh()
                 continue
 
+            # Forward unhandled message.
             if msgtype != ConsoleMessageType.GETCH.value:
                 yield msgtype, seq, *args
                 continue
 
+            # Handle GETCH message.
             (key,) = args
             if key == curses.KEY_MOUSE:
                 libcurses.Mouse.handle_mouse_event()
@@ -226,6 +204,8 @@ class Console:
 
             elif not libcurses.is_fkey(key) and self.debug:
                 logger.trace("Unhandled key {} keyname {}", key, keyname)
+
+    getline = get_msgtype_lineno_line
 
     def toggle_debug(self, key: int) -> None:
         """Change `debug`; signature per `libcurses.register_fkey`."""

@@ -1,17 +1,12 @@
-import sys
 from queue import SimpleQueue
 
 from loguru import logger
 
 from tests.feeds.number import NumberFeed
-
-try:
-    logger.remove(0)
-except ValueError:
-    ...
-logger.add(sys.stderr, format="{level} {function} {line} {message}", level="TRACE")
+from tests.testlib import slow
 
 
+@slow
 def test_feed():
     queue = SimpleQueue()
     feed = NumberFeed(queue)

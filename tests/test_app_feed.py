@@ -96,7 +96,6 @@ class Application:
         self.console = Console(
             logwin=self.logwin,
             refresh=self.refresh,
-            dispatch=self.dispatch,
         )
 
         # Add an application data feed.

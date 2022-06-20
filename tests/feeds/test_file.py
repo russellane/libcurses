@@ -1,19 +1,13 @@
 from queue import SimpleQueue
 
 import pytest
+from loguru import logger
 
 from tests.feeds.file import FileFeed
-
-# disabled = pytest.mark.skipif(True, reason="disabled")
-# slow = pytest.mark.skipif(not os.environ.get("SLOW"), reason="slow")
-#
-# try:
-#     logger.remove(0)
-# except ValueError:
-#     ...
-# logger.add(sys.stderr, format="{level} {function} {line} {message}", level="TRACE")
+from tests.testlib import slow
 
 
+@slow
 @pytest.mark.parametrize(
     ("name", "nlines", "rewind", "follow"),
     [
@@ -31,7 +25,6 @@ from tests.feeds.file import FileFeed
 def test_queue_get(tmp_path, name, nlines, rewind, follow):
 
     _ = name  # unused
-    print()
     path = tmp_path / f"file-with-{nlines}-lines.txt"
     path.write_text(
         "\n".join([f"This is line {x}" for x in range(1, nlines + 1)]),
@@ -44,7 +37,7 @@ def test_queue_get(tmp_path, name, nlines, rewind, follow):
 
     while True:
         (msgtype, lineno, line) = feed.queue.get()
-        print(f"msgtype {msgtype} lineno {lineno} line `{line.strip()}`")
+        logger.debug(f"msgtype {msgtype} lineno {lineno} line `{line.strip()}`")
         if lineno <= 0:
             break
         last_lineno = lineno
@@ -53,4 +46,4 @@ def test_queue_get(tmp_path, name, nlines, rewind, follow):
     if last_lineno is not None:
         assert last_lineno == nlines
 
-    print(f"NLINES: {nlines}")
+    logger.debug(f"NLINES: {nlines}")

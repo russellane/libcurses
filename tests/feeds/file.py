@@ -26,7 +26,7 @@ class FileFeed:
         self.rewind = rewind
         self.follow = follow
 
-        threading.Thread(target=self.run, name=self.msgtype, daemon=False).start()
+        threading.Thread(target=self.run, name=self.msgtype, daemon=True).start()
 
     def run(self) -> None:
 

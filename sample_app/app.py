@@ -161,11 +161,16 @@ class Application:
         """Toggle control."""
         self.dispatch_debug = not self.dispatch_debug
 
-    def main(self):
-        """Loop over console messages, update display."""
+    def run(self) -> None:
+        """Run console message event-loop."""
         self.console.run()
 
     def refresh(self, line: str) -> None:
+        """Redisplay prompt, LINE, and refresh curses.
+
+        Callback before reading each character during GETLINE, passed the
+        current value of the LINE as it's being entered.
+        """
 
         # Flush output.
         self.logwin.refresh()
@@ -186,6 +191,7 @@ class Application:
         self.mainwin.refresh()
 
     def dispatch(self, msgtype: str, *args) -> None:
+        """Callback after ENTER during GETLINE, passed the final LINE."""
 
         # if self.dispatch_debug:
         #     logger.log(msgtype, f"msgtype={msgtype!r} args={args!r}")
@@ -218,4 +224,4 @@ class Application:
 
 
 if __name__ == "__main__":
-    wrapper(lambda stdscr: Application(stdscr).main())
+    wrapper(lambda stdscr: Application(stdscr).run())

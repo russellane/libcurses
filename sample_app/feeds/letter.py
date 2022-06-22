@@ -31,8 +31,7 @@ class LetterFeed:
             number = next(self.numbers)
             msg = f"{number} after {self.timer} seconds."
             self.queue.put((self.msgtype, seq, msg))
-            if self.ctrlq:
-                self.ctrlq.put((self.msgtype, 0, None))
+            self.ctrlq.put((self.msgtype, 0, None))
 
             if self.debug:
                 msg = number.rjust(30, "-")

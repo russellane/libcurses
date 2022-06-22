@@ -19,6 +19,7 @@ class FileFeed:
         self,
         ctrlq: SimpleQueue,
         path: Path | str,
+        *,
         rewind: bool = True,
         follow: bool = False,
     ):
@@ -43,17 +44,15 @@ class FileFeed:
                     self.lineno += 1
 
             while True:
-                time.sleep(1)
                 # logger.debug(f"reading {str(self.path)!r}")
                 for line in file:
                     self.lineno += 1
-                    # send path as msgtype
                     self.queue.put((self.msgtype, self.lineno, line))
-                    if self.ctrlq:
-                        self.ctrlq.put((self.msgtype, 0, None))
-                    time.sleep(0.001)  # need context switch
+                    self.ctrlq.put((self.msgtype, 0, None))
 
                 self.is_eof = True
                 if not self.follow:
                     self.queue.put((self.msgtype, -self.lineno, ""))
+                    self.ctrlq.put((self.msgtype, 0, None))
                     break
+                time.sleep(1)

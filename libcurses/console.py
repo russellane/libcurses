@@ -33,7 +33,8 @@ class Console:
     def __init__(
         self,
         logwin: curses.window,
-        refresh,
+        refresh: callable,
+        dispatch: callable,
         queue: SimpleQueue = None,
     ) -> None:
         """Start thread to read keyboard/mouse and push characters to application."""
@@ -47,6 +48,9 @@ class Console:
         # current value of the LINE as it's being entered. Application
         # should redisplay prompt, LINE, and refresh curses.
         self.refresh = refresh
+
+        # Callback after ENTER during GETLINE, passed the final LINE.
+        self.dispatch = dispatch
 
         # Workers send messages to `main_thread`.
         self.queue = queue or SimpleQueue()
@@ -62,6 +66,7 @@ class Console:
         self._level_name = "INFO"
         self._id = None
         self._config()
+        self.running = True
 
         # Start thread to loop over `logwin.getch()` forwarding each
         # character to the REPL input generator `get_msgtype_lineno_line`.
@@ -132,8 +137,22 @@ class Console:
         self._config()
         logger.trace(f"update verbose={self._level_name!r}")
 
-    def get_msgtype_lineno_line(self) -> str:
-        """Yield messages from console and application feeds."""
+    def run(self) -> str:
+        """Run event-loop.
+
+        For each message in queue,
+            case `msgtype`
+                LOGGER)
+                    display message in `logwin` ;;
+                GETCH)
+                    if mouse
+                        `handle_mouse_event`
+                    else
+                        build LINE until ENTER, call application's `dispatch` ;;
+                *)
+                    call application's `dispatch` ;;
+            esac
+        """
 
         # pylint: disable=too-many-branches
 
@@ -141,12 +160,12 @@ class Console:
 
         _line = ""  # collect keys until Enter.
 
-        while True:
+        while self.running:
 
             # Flush output, redisplay prompt, ...
             self.refresh(_line)
 
-            # Wait for keystroke... or other msgtype
+            # Wait for message.
             try:
                 (msgtype, seq, *args) = self.queue.get()
             except KeyboardInterrupt as err:
@@ -159,6 +178,7 @@ class Console:
             # Handle LOGGER message.
             if msgtype == ConsoleMessageType.LOGGER.value:
                 (level, msg) = args
+                # we are main thread
                 color = self.colormap[level]
                 self.logwin.addstr(msg, color)
                 self.logwin.refresh()
@@ -166,7 +186,7 @@ class Console:
 
             # Forward unhandled message.
             if msgtype != ConsoleMessageType.GETCH.value:
-                yield msgtype, seq, *args
+                self.dispatch(msgtype, seq, *args)
                 continue
 
             # Handle GETCH message.
@@ -189,7 +209,7 @@ class Console:
 
             if key in (curses.ascii.LF, curses.ascii.CR, curses.KEY_ENTER):
                 self.lineno += 1
-                yield GETLINE, self.lineno, _line
+                self.dispatch(GETLINE, self.lineno, _line)
                 _line = ""
 
             elif key == curses.ascii.BS:
@@ -204,8 +224,6 @@ class Console:
 
             elif not libcurses.is_fkey(key) and self.debug:
                 logger.trace("Unhandled key {} keyname {}", key, keyname)
-
-    getline = get_msgtype_lineno_line
 
     def toggle_debug(self, key: int) -> None:
         """Change `debug`; signature per `libcurses.register_fkey`."""

@@ -1,24 +1,28 @@
 import itertools
-import threading
 import time
 from queue import SimpleQueue
+from threading import Thread
 
 from loguru import logger
 
 
-class NumberFeed:
+class LetterFeed:
 
-    msgtype = "NUMBER"
-    numbers = itertools.cycle([x * 10 for x in "123"])
+    msgtype = "LETTER"
+    numbers = itertools.cycle([x * 10 for x in "ABCDE"])
     timers = itertools.cycle([3, 2, 1])
     timer = None
     debug = False
 
-    def __init__(self, queue: SimpleQueue):
+    def __init__(
+        self,
+        ctrlq: SimpleQueue,
+    ):
 
-        self.queue = queue
+        self.ctrlq = ctrlq
+        self.queue = SimpleQueue()
         self.next_timer(None)
-        threading.Thread(target=self.run, name=self.msgtype, daemon=True).start()
+        Thread(target=self.run, name=self.msgtype, daemon=True).start()
 
     def run(self) -> None:
 
@@ -27,6 +31,8 @@ class NumberFeed:
             number = next(self.numbers)
             msg = f"{number} after {self.timer} seconds."
             self.queue.put((self.msgtype, seq, msg))
+            if self.ctrlq:
+                self.ctrlq.put((self.msgtype, 0, None))
 
             if self.debug:
                 msg = number.rjust(30, "-")

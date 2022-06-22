@@ -8,4 +8,4 @@ ignore =
 # don't check docstrings in tests
 per-file-ignores = 
     tests/*:D,PLC
-    xtests/*:D,PLC
+    sample_app/*:D,PLC

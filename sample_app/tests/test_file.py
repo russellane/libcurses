@@ -2,9 +2,11 @@ from queue import SimpleQueue
 
 import pytest
 from loguru import logger
+from testlib import slow
 
-from tests.feeds.file import FileFeed
-from tests.testlib import slow
+from sample_app.feeds.file import FileFeed
+
+# from sample_app.tests.testlib import slow
 
 
 @slow

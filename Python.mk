@@ -29,28 +29,28 @@ __pypackages__:
 
 .PHONY:		tags
 tags::
-		ctags -R $(PROJECT) tests __pypackages__ 
+		ctags -R $(PROJECT) sample_app tests __pypackages__ 
 
 black::
-		python -m black -q $(PROJECT) tests
+		python -m black -q $(PROJECT) sample_app tests
 
 isort::
-		python -m isort $(PROJECT) tests
+		python -m isort $(PROJECT) sample_app tests
 
 flake8::
-		python -m flake8 $(PROJECT) tests
+		python -m flake8 $(PROJECT) sample_app tests
 
 pytest::
-		python -m pytest --exitfirst --showlocals --verbose tests
+		python -m pytest --exitfirst --showlocals --verbose sample_app tests
 
 pytest_debug::
-		python -m pytest --exitfirst --showlocals --verbose --capture=no tests
+		python -m pytest --exitfirst --showlocals --verbose --capture=no sample_app tests
 
 coverage::
-		python -m pytest --cov=$(PROJECT) tests
+		python -m pytest --cov=$(PROJECT) sample_app tests
 
 cov_html::
-		python -m pytest --cov=$(PROJECT) --cov-report=html tests
+		python -m pytest --cov=$(PROJECT) --cov-report=html sample_app tests
 		xdg-open htmlcov/index.html
 
 clean::

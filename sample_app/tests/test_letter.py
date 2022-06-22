@@ -2,14 +2,13 @@ from queue import SimpleQueue
 
 from loguru import logger
 
-from tests.feeds.letter import LetterFeed
-from tests.testlib import slow
+from sample_app.feeds.letter import LetterFeed
+from sample_app.tests.testlib import slow
 
 
 @slow
 def test_feed():
-    queue = SimpleQueue()
-    feed = LetterFeed(queue)
+    feed = LetterFeed(SimpleQueue())
     feed.next_timer(None)
     feed.next_timer(None)
     for _ in range(10):

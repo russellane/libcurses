@@ -587,6 +587,16 @@ class Grid(ResizeMixin):
 
             curses.doupdate()
 
+    def refresh(self):
+        """Noutrefresh grid."""
+
+        for win in self.boxes:
+            win.touchwin()
+            win.noutrefresh()
+
+        with libcurses.core.LOCK:
+            curses.doupdate()
+
     def winyx(self, win):
         """Return string of window coordinates."""
 

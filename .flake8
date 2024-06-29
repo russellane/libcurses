@@ -1,11 +1,11 @@
 [flake8]
 max-line-length = 97
 ignore =
-    E203 # black; whitespace before ':'
-    W503 # black; line break before binary operator
-    SIM902 # Use keyword-argument instead of magic boolean
+    # black; whitespace before ':'
+    E203,
+    # black; line break before binary operator
+    W503,
 
 # don't check docstrings in tests
 per-file-ignores = 
     tests/*:D,PLC
-    xtests/*:D,PLC

@@ -3,16 +3,17 @@
 import curses
 from collections import defaultdict
 from threading import Lock
+from typing import Callable
 
-CURSORWIN = None  # last window passed to `curses.getch`
-LOCK = None  # protect `curses.doupdate`
-FKEYS = None  # function key handlers
+CURSORWIN: curses.window  # last window passed to `curses.getch`
+LOCK: Lock  # protect `curses.doupdate`
+FKEYS: dict[int, list[Callable]]  # function key handlers
 
 
-def wrapper(func):
+def wrapper(func) -> None:
     """Wrap https://docs.python.org/3/library/curses.html#curses.wrapper."""
 
-    def _wrapper(stdscr):
+    def _wrapper(stdscr: curses.window) -> None:
 
         global CURSORWIN  # noqa
         global LOCK  # noqa

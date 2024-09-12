@@ -10,7 +10,7 @@ from libcurses.getkey import getkey
 from libcurses.mouse import Mouse
 
 
-def getline(win):
+def getline(win: curses.window) -> str | None:
     """Return line of input from window."""
 
     # pylint: disable=too-many-branches

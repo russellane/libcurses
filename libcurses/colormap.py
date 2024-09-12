@@ -5,7 +5,7 @@ import re
 
 from loguru import logger
 
-_COLORMAP = None  # key=loguru-level-name, value=curses-color/attr
+_COLORMAP: dict[str, int] = {}  # key=loguru-level-name, value=curses-color/attr
 
 
 def get_colormap() -> dict[str, int]:
@@ -50,7 +50,7 @@ def get_colormap() -> dict[str, int]:
 
         re_words = re.compile(r"[\w]+")
 
-        for idx, lvl in enumerate(logger._core.levels.values()):  # noqa protected-access
+        for idx, lvl in enumerate(logger._core.levels.values()):  # type: ignore # noqa protected-access
             fg = curses.COLOR_WHITE
             bg = curses.COLOR_BLACK
             attr = 0

@@ -21,7 +21,7 @@ class MenuItem:
     payload: Any = field(default=None, repr=False)  # opaque
     keyname: str = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.key = ord(self.key) if isinstance(self.key, str) else self.key
         self.keyname = curses.keyname(self.key).decode()
 
@@ -33,12 +33,12 @@ class Menu:
     title: str
     instructions: str
     _: KW_ONLY
-    subtitle: str = None
-    win: curses.window = None
-    menuitems: [str, MenuItem] = field(init=False, repr=False, default_factory=dict)
+    subtitle: str | None = None
+    win: curses.window | None = None
+    menuitems: dict[str, MenuItem] = field(init=False, repr=False, default_factory=dict)
     max_len_keyname: int = field(default=0, init=False, repr=False)
 
-    def add_item(self, key, text: str, payload=None) -> None:
+    def add_item(self, key: int, text: str, payload: Any = None) -> None:
         """Add item to menu.
 
         Args:
@@ -58,7 +58,7 @@ class Menu:
     def preprompt(self) -> None:
         """Within `getkey`-loop, after menu, before prompt and `getkey`."""
 
-    def prompt(self):
+    def prompt(self) -> MenuItem | None:
         """Display menu on `self.win`, read keyboard, and return selected item."""
 
         win = self.win
@@ -91,7 +91,7 @@ class Menu:
 
             keyname = curses.keyname(key).decode()
             win.addstr(keyname + "\n")
-            if item := self.menuitems.get(keyname):
-                return item
+            if _item := self.menuitems.get(keyname):
+                return _item
 
             logger.error("invalid key {}={!r}", key, keyname)

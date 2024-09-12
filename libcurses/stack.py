@@ -9,7 +9,7 @@ from libcurses.bw import BorderedWindow
 class WindowStack:
     """Vertical stack of windows."""
 
-    def __init__(self, neighbor_left, padding_y):
+    def __init__(self, neighbor_left: BorderedWindow, padding_y: int) -> None:
         """Create a vertical stack of windows with 'border-collapse: collapse'.
 
         A visual stack, not a push-pop thing... think smokestack or stovepipe.
@@ -18,21 +18,21 @@ class WindowStack:
         self.neighbor_left = neighbor_left
         self.padding_y = padding_y
         self.begin_x = self.neighbor_left.begin_x + self.neighbor_left.ncols - 1
-        self.windows = []
+        self.windows: list[BorderedWindow] = []
 
-    def redraw(self):
+    def redraw(self) -> None:
         """Redraw stack."""
 
         for w in self.windows:
             w.redraw()
 
-    def refresh(self):
+    def refresh(self) -> None:
         """Refresh stack."""
 
         for w in self.windows:
             w.refresh()
 
-    def get_border(self, loc):
+    def get_border(self, loc: int) -> Border:
         """Return the appropriate Border for a window based on its location in the stack."""
 
         first = loc == 0
@@ -59,7 +59,7 @@ class WindowStack:
                 # additional and final
                 return Border(tl=curses.ACS_LTEE, tr=curses.ACS_RTEE, bl=curses.ACS_BTEE)
 
-    def append(self, nlines, ncols):
+    def append(self, nlines: int, ncols: int) -> BorderedWindow:
         """Create window at bottom of stack."""
 
         first = len(self.windows) == 0
@@ -88,7 +88,7 @@ class WindowStack:
         bw.border(self.get_border(len(self.windows) - 1))
         return bw
 
-    def insert(self, nlines, ncols, loc=0):
+    def insert(self, nlines: int, ncols: int, loc: int = 0) -> None:
         """Insert new BorderedWindow at loc."""
 
         if len(self.windows) == 0:

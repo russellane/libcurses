@@ -9,7 +9,7 @@ import libcurses.core
 from libcurses.mouse import Mouse
 
 
-def getkey(win, no_mouse: bool = False) -> int:
+def getkey(win, no_mouse: bool = False) -> int | None:
     """Read a character from window.
 
     Return:

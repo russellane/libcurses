@@ -92,9 +92,9 @@ class Application:
         logger.level("custom-trace", no=_trace, color="<cyan><underline>")
 
         # Application data here...
-        self.timer = None
-        self.last_line = None  # for menu to display last line entered.
-        self.menu = None
+        self.timer: SampleTimer
+        self.last_line: str  # for menu to display last line entered.
+        self.menu: Menu
         self.mode = "menu"
 
         # +----------+---------+
@@ -222,6 +222,7 @@ class Application:
             """Shared handler."""
             self._add_history("from menu item: " + item.text)
             logger.success("You selected {!r}", item.text)
+            return False
             # return True  # to break caller's loop
 
         self.menu.add_item("1", "This is the FIRST choice.", _echo)
@@ -279,10 +280,10 @@ class Application:
 
         self.mainwin.addstr("[^D, F1=MENU, F2=LINE] press KEY: ")
         key = getkey(self.mainwin)
-        name = curses.keyname(key).decode()
+        name = curses.keyname(key).decode() if key is not None else "None"
         self.mainwin.addstr(f"key={key!r} name={name!r}\n")
         if key is None or key <= 0:
-            self.mode = None
+            self.mode = ""
         if key == curses.KEY_F1:
             self.mode = "menu"
         elif key == curses.KEY_F2:

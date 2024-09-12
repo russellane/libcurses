@@ -2,4 +2,8 @@
 
 from collections import namedtuple
 
-Border = namedtuple("Border", ["ls", "rs", "ts", "bs", "tl", "tr", "bl", "br"], defaults=[0] * 8)
+Border = namedtuple(
+    "Border",
+    ["ls", "rs", "ts", "bs", "tl", "tr", "bl", "br"],
+    defaults=[0, 0, 0, 0, 0, 0, 0, 0],
+)

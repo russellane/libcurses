@@ -10,24 +10,24 @@ class MouseEvent:
     # pylint: disable=too-many-instance-attributes
     _last_mouse = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize `MouseEvent` with current mouse info."""
 
         # https://docs.python.org/3/library/curses.html#curses.getmouse
         _, x, y, _, bstate = curses.getmouse()
-        self.x = x
-        self.y = y
-        self.bstate = bstate
+        self.x: int = x
+        self.y: int = y
+        self.bstate: int = bstate
 
         if bstate & curses.REPORT_MOUSE_POSITION != 0 and self._last_mouse:
-            self.button = self._last_mouse.button
-            self.nclicks = self._last_mouse.nclicks
-            self.is_pressed = True
-            self.is_released = False
-            self.is_alt = self._last_mouse.is_alt
-            self.is_ctrl = self._last_mouse.is_ctrl
-            self.is_shift = self._last_mouse.is_shift
-            self.is_moving = True
+            self.button: int = self._last_mouse.button
+            self.nclicks: int = self._last_mouse.nclicks
+            self.is_pressed: bool = True
+            self.is_released: bool = False
+            self.is_alt: bool = self._last_mouse.is_alt
+            self.is_ctrl: bool = self._last_mouse.is_ctrl
+            self.is_shift: bool = self._last_mouse.is_shift
+            self.is_moving: bool = True
             return
 
         #
@@ -113,7 +113,7 @@ class MouseEvent:
 
         self.__class__._last_mouse = copy.copy(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
 
         parts = []
         if self.is_alt:
@@ -128,7 +128,7 @@ class MouseEvent:
             string += f"*{self.nclicks}"
         return string
 
-    def __repr__(self):
+    def __repr__(self) -> str:
 
         return (
             self.__class__.__name__

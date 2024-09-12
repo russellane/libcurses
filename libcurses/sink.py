@@ -14,7 +14,7 @@ class Sink:
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, logwin: curses.window):
+    def __init__(self, logwin: curses.window) -> None:
         """Begin logging to `logwin`."""
 
         self.logwin = logwin
@@ -22,7 +22,7 @@ class Sink:
         self.location = "{name}.{function}:{line}"
         self.delim = "|"
 
-        self._id = None
+        self._id: int | None = None
         self._padlev = 0  # pad `level` column.
         self._padloc = 0  # pad `location` column.
 
@@ -39,7 +39,7 @@ class Sink:
         self._padloc = 0
         self._padlev = 0
 
-    def set_level(self, level: str):
+    def set_level(self, level: str) -> None:
         """Set logging level."""
 
         self.level = level
@@ -47,7 +47,7 @@ class Sink:
         logger.info(self.level)
         self.reset_padding()
 
-    def set_location(self, location: str = None):
+    def set_location(self, location: str | None = None) -> None:
         """Set format of `location` field."""
 
         self.location = location or ""
@@ -55,12 +55,13 @@ class Sink:
         logger.info(repr(self.location))
         self.reset_padding()
 
-    def set_verbose(self, verbose: int) -> None:
+    def set_verbose(self, verbose: int) -> int:
         """Set logging level based on `--verbose`."""
 
         #         ["",     "-v",    "-vv"]
         _levels = ["INFO", "DEBUG", "TRACE"]
         self.set_level(_levels[min(verbose, len(_levels) - 1)])
+        return verbose
 
     def config(self) -> None:
         """Not public."""

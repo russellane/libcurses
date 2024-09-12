@@ -8,7 +8,14 @@ from libcurses.border import Border
 class BorderedWindow:
     """Bordered Window."""
 
-    def __init__(self, nlines, ncols, begin_y, begin_x, _border=None):
+    def __init__(
+        self,
+        nlines: int,
+        ncols: int,
+        begin_y: int,
+        begin_x: int,
+        _border: Border | None = None,
+    ) -> None:
         """Create new bordered window with the given dimensions and optional border stylings.
 
         A bordered window is composed of two windows:
@@ -36,7 +43,7 @@ class BorderedWindow:
 
         self.border(_border or Border())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
 
         # getmaxyx does not return the maximum values for y and x, as the name indicates.
         # https://docs.python.org/3/library/curses.html#curses.window.getmaxyx
@@ -58,24 +65,24 @@ class BorderedWindow:
             + ")"
         )
 
-    def redraw(self):
+    def redraw(self) -> None:
         """Redraw window."""
 
         self.b.redrawwin()
         self.w.redrawwin()
 
-    def refresh(self):
+    def refresh(self) -> None:
         """Refresh window."""
 
         self.b.refresh()
         self.w.refresh()
 
-    def border(self, _border):
+    def border(self, _border: Border) -> None:
         """Set window border."""
 
         self.b.border(*_border)
 
-    def resize(self, nlines, ncols):
+    def resize(self, nlines: int, ncols: int) -> None:
         """Resize window."""
 
         # constrain cursor to new dimensions
@@ -90,7 +97,7 @@ class BorderedWindow:
         self.nlines = nlines
         self.ncols = ncols
 
-    def mvwin(self, new_y, new_x):
+    def mvwin(self, new_y: int, new_x: int) -> None:
         """Move window."""
 
         self.b.mvwin(new_y, new_x)
@@ -98,7 +105,7 @@ class BorderedWindow:
         self.begin_y, self.begin_x = new_y, new_x
         self.refresh()
 
-    def addstr(self, *args):
+    def addstr(self, *args) -> None:
         """Add strings to window."""
 
         self.w.addstr(*args)

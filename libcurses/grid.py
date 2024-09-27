@@ -81,6 +81,12 @@ import libcurses.core
 from libcurses.getkey import getkey
 from libcurses.mouse import Mouse, MouseEvent
 
+# A character/attribute pair.
+CharAttr = tuple[int, int] | None
+
+# A callback to add boxes to an empty grid.
+GridBuilder = Callable[[], None]
+
 # -------------------------------------------------------------------------------
 
 
@@ -103,7 +109,7 @@ class Grid:
     _init_called = False
 
     @classmethod
-    def _init_borders(cls):
+    def _init_borders(cls) -> None:
         """Init borders.
 
         5------1------6
@@ -154,7 +160,8 @@ class Grid:
 
     # -------------------------------------------------------------------------------
 
-    def _get_border_symbol(self, y: int, x: int) -> tuple[Any, int]:
+    def _get_border_symbol(self, y: int, x: int) -> tuple[int, int]:
+        """Returns character and attribute."""
 
         assert self.grid[y][x]
         neighbors = 0
@@ -173,9 +180,16 @@ class Grid:
 
         attr = curses.A_REVERSE if self.attrs[y][x] else curses.A_NORMAL
 
-        return self._borders.get(neighbors), attr
+        char = self._borders.get(neighbors)
+        assert char
+        return char, attr
 
-    def __init__(self, win: curses.window, bkgd_grid=None, bkgd_box=None) -> None:
+    def __init__(
+        self,
+        win: curses.window,
+        bkgd_grid: CharAttr = None,
+        bkgd_box: CharAttr = None,
+    ) -> None:
         """Create grid in `win`.
 
         Args:
@@ -209,7 +223,7 @@ class Grid:
         self._draw_box(self.nlines, self.ncols, 0, 0)
         self.boxes = [self.win]
         self.boxnames = {self.win: "grid"}
-        self._builder: Callable
+        self._builder: GridBuilder
 
         libcurses.core.register_fkey(
             lambda key: self.handle_term_resized_event(), curses.KEY_RESIZE
@@ -236,7 +250,7 @@ class Grid:
             + ")"
         )
 
-    def register_builder(self, func: Callable) -> None:
+    def register_builder(self, func: GridBuilder) -> None:
         """Register `func` to add boxes to this grid.
 
         Configure KEY_RESIZE to call it whenever that event occurs.
@@ -325,7 +339,7 @@ class Grid:
         ncols: int,
         begin_y: int = 0,
         begin_x: int = 0,
-        bkgd_box=None,
+        bkgd_box: CharAttr = None,
         left: Grid | curses.window | None = None,
         right: Grid | curses.window | None = None,
         top: Grid | curses.window | None = None,
@@ -677,7 +691,7 @@ class Grid:
             self._builder()
         # self.redraw()
 
-    def _handle_mouse_event(self, mouse: MouseEvent, args) -> bool:
+    def _handle_mouse_event(self, mouse: MouseEvent, args: Any) -> bool:
         """Handle mouse event to resize boxes within grid.
 
         If mouse pressed on an interior window border, resize windows on

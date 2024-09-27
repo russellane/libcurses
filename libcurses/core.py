@@ -5,12 +5,15 @@ from collections import defaultdict
 from threading import Lock
 from typing import Callable
 
+# A function key handler receives the key pressed, and returns nothing.
+FKeyHandler = Callable[[int], None]
+
 CURSORWIN: curses.window  # last window passed to `curses.getch`
 LOCK: Lock  # protect `curses.doupdate`
-FKEYS: dict[int, list[Callable]]  # function key handlers
+FKEYS: dict[int, list[FKeyHandler]]  # function key handlers
 
 
-def wrapper(func) -> None:
+def wrapper(func: Callable[[curses.window], None]) -> None:
     """Wrap https://docs.python.org/3/library/curses.html#curses.wrapper."""
 
     def _wrapper(stdscr: curses.window) -> None:
@@ -28,7 +31,7 @@ def wrapper(func) -> None:
     curses.wrapper(_wrapper)
 
 
-def register_fkey(func, key: int = 0) -> None:
+def register_fkey(func: FKeyHandler, key: int = 0) -> None:
     """Register `func` to be called when `key` is pressed.
 
     Args:

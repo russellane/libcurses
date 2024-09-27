@@ -2,7 +2,7 @@
 
 import curses
 import curses.ascii
-from dataclasses import KW_ONLY, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any
 
 from loguru import logger
@@ -26,13 +26,12 @@ class MenuItem:
         self.keyname = curses.keyname(self.key).decode()
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Menu:
     """Menu."""
 
     title: str
     instructions: str
-    _: KW_ONLY
     subtitle: str | None = None
     win: curses.window | None = None
     menuitems: dict[str, MenuItem] = field(init=False, repr=False, default_factory=dict)

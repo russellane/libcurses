@@ -2,11 +2,18 @@
 
 import curses
 from collections import defaultdict, namedtuple
-from typing import Callable
+from typing import Any, Callable
 
 from loguru import logger
 
 from libcurses.mouseevent import MouseEvent
+
+__all__ = ["MouseEvent"]
+
+# A Mouse handler receives the MouseEvent and any additional args, and
+# returns True if the handler "handled" the event, or False if not.
+
+MouseHandler = Callable[[MouseEvent, Any], bool]
 
 
 class Mouse:
@@ -32,7 +39,11 @@ class Mouse:
     handlers: list[handler] = []
 
     @classmethod
-    def add_internal_mouse_handler(cls, func: Callable, args=None) -> None:
+    def add_internal_mouse_handler(
+        cls,
+        func: MouseHandler,
+        args: Any = None,
+    ) -> None:
         """Register `func` to be called with `args` when mouse event happens."""
 
         handler = cls.handler(func, args)
@@ -47,11 +58,11 @@ class Mouse:
     @classmethod
     def add_mouse_handler(
         cls,
-        func: Callable,
+        func: MouseHandler,
         y: int,
         x: int,
         ncols: int,
-        args=None,
+        args: Any = None,
     ) -> None:
         """Call `func` with `args` when mouse event happens at (y, x)."""
 

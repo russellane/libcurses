@@ -9,7 +9,7 @@ import libcurses.core
 from libcurses.mouse import Mouse
 
 
-def getkey(win, no_mouse: bool = False) -> int | None:
+def getkey(win: curses.window | None = None, no_mouse: bool = False) -> int | None:
     """Read a character from window.
 
     Return:
@@ -29,7 +29,7 @@ def getkey(win, no_mouse: bool = False) -> int | None:
             win.noutrefresh()
             with libcurses.core.LOCK:
                 curses.doupdate()
-            key = win.getch()
+            key: int = win.getch()
             if key < 0:
                 return key
 

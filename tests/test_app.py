@@ -30,7 +30,7 @@ class SampleTimer(threading.Thread):
     daemon = True
     intervals = deque([3, 2, 1, 0.75, 0.5, 0.25])
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Init widget."""
 
         threading.Thread.__init__(self)
@@ -74,7 +74,7 @@ class Application:
 
         # Configure logger...
         # Remove bold from default levels.
-        for lvl in logger._core.levels.values():
+        for lvl in logger._core.levels.values():  # type: ignore[attr-defined]
             logger.level(lvl.name, color=lvl.color.replace("<bold>", ""))
         # Add custom logging levels...
         # Set severity of custom levels relative to builtins.
@@ -95,7 +95,7 @@ class Application:
         self.timer: SampleTimer
         self.last_line: str  # for menu to display last line entered.
         self.menu: Menu
-        self.mode = "menu"
+        self.mode: str | None = "menu"
 
         # +----------+---------+
         # | main     | history |
@@ -159,18 +159,17 @@ class Application:
         # Change verbosity on the fly; (not required)
         self.verbose = cycle([2, 1, 0])  # ["-vv", "-v", ""]
         self.sink.set_verbose(next(self.verbose))
-        register_fkey(
-            lambda key: (
-                self.sink.set_verbose(next(self.verbose)),
-                self._add_history("from global fkey: " + self.sink.level),
-            ),
-            curses.KEY_F9,
-        )
+        register_fkey(self._cycle_verbose, curses.KEY_F9)
 
         # Reset logger column padding.
         register_fkey(lambda key: self.sink.reset_padding(), curses.KEY_DC)
 
         self.grid.redraw()
+
+    def _cycle_verbose(self, _key: int) -> None:
+        """This worked as a lambda; mypy didn't like it as a lambda."""
+        self.sink.set_verbose(next(self.verbose))
+        self._add_history("from global fkey: " + self.sink.level)
 
     def run(self) -> None:
         """Run application."""
@@ -207,16 +206,14 @@ class Application:
         """Run menu mode."""
 
         # https://github.com/PyCQA/pylint/issues/5225
-        # pylint: disable=no-value-for-parameter
+        # pylint: enable=no-value-for-parameter
         self.menu = Menu(
             title="Main menu",
-            # instructions="\n".join(["Make your choice"]),
             instructions="Make your choice",
             win=self.mainwin,
         )
-        # pylint: enable=no-value-for-parameter
 
-        self.menu.preprompt = self.preprompt
+        self.menu.preprompt = self.preprompt  # type: ignore[method-assign]
 
         def _echo(item: MenuItem) -> bool:
             """Shared handler."""
@@ -225,10 +222,10 @@ class Application:
             return False
             # return True  # to break caller's loop
 
-        self.menu.add_item("1", "This is the FIRST choice.", _echo)
-        self.menu.add_item("2", "This is the SECOND choice.", _echo)
-        self.menu.add_item("a", "Items are case-sensitive.", _echo)
-        self.menu.add_item("A", "ITEMS ARE CASE-SENSITIVE.", _echo)
+        self.menu.add_item(ord("1"), "This is the FIRST choice.", _echo)
+        self.menu.add_item(ord("2"), "This is the SECOND choice.", _echo)
+        self.menu.add_item(ord("a"), "Items are case-sensitive.", _echo)
+        self.menu.add_item(ord("A"), "ITEMS ARE CASE-SENSITIVE.", _echo)
 
         self.menu.add_item(
             curses.KEY_F1, "Help!", lambda item: logger.success("Helpful message...")

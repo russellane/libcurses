@@ -105,7 +105,10 @@ class BorderedWindow:
         self.begin_y, self.begin_x = new_y, new_x
         self.refresh()
 
-    def addstr(self, *args) -> None:
-        """Add strings to window."""
+    def addstr(self, string: str, attr: int | None = None) -> None:
+        """Add string[,attr] to window."""
 
-        self.w.addstr(*args)
+        if attr is not None:
+            self.w.addstr(string, attr)
+        else:
+            self.w.addstr(string)

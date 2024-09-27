@@ -7,14 +7,14 @@ import libcurses
 from libcurses.grid import Grid
 
 
-def test_stub():
+def test_stub() -> None:
     pass
 
 
 # -------------------------------------------------------------------------------
 
 
-def main1(win):
+def main1(win: curses.window) -> None:
 
     win.clear()
     win.refresh()
@@ -69,7 +69,7 @@ def main1(win):
 # -------------------------------------------------------------------------------
 
 
-def main3(win):
+def main3(win: curses.window) -> None:
 
     #    0----+----1----+----2----+----3
     #  0 +--------+--------+--------+
@@ -113,7 +113,7 @@ def main3(win):
 
 
 @logger.catch
-def main4(win):
+def main4(win: curses.window) -> None:
 
     _, c2, c3 = setup_test(win)
 
@@ -139,13 +139,13 @@ def main4(win):
 
 
 @logger.catch
-def main5(win):
+def main5(win: curses.window) -> None:
 
     # pylint: disable=too-many-locals
 
     c1, c2, c3 = setup_test(win)
 
-    grid = Grid(win, bkgd_grid=("+", c2), bkgd_box=(".", c3))
+    grid = Grid(win, bkgd_grid=(ord("+"), c2), bkgd_box=(ord("."), c3))
     # grid = Grid(win, bkgd_grid=('.', c2))
     # grid = Grid(win, bkgd_grid=('.', c3))
     # grid = Grid(win, bkgd_box=('.', c2))
@@ -267,11 +267,11 @@ def main5(win):
 
 
 @logger.catch
-def main6(win):
+def main6(win: curses.window) -> None:
 
     _, c2, c3 = setup_test(win)
 
-    grid = Grid(win, bkgd_grid=("+", c2), bkgd_box=(".", c3))
+    grid = Grid(win, bkgd_grid=(ord("+"), c2), bkgd_box=(ord("."), c3))
 
     top = grid.box("hsplit-top", 5, 0, left=grid, right=grid, top=grid)
     grid.box("hsplit-bot", 0, 0, left=grid, right=grid, top2b=top, bottom=grid)
@@ -293,7 +293,7 @@ def main6(win):
 # -------------------------------------------------------------------------------
 
 
-def setup_test(win):
+def setup_test(win: curses.window) -> tuple[int, int, int]:
     #                   fg                  bg
     curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_RED)
     c1 = curses.color_pair(1)
@@ -302,7 +302,7 @@ def setup_test(win):
     curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_WHITE)
     c3 = curses.color_pair(3)
     win.clear()
-    win.bkgd("*", c1)
+    win.bkgd(ord("*"), c1)
     # prompt(None, win, msg=f'win setup {winyx(win)}')
     return c1, c2, c3
 
@@ -310,7 +310,7 @@ def setup_test(win):
 # -------------------------------------------------------------------------------
 
 
-def _test_backgrounds(win, c2, c3, msg):
+def _test_backgrounds(win: curses.window, c2: int, c3: int, msg: str) -> None:
 
     grid = Grid(win)
     _test_outside_ltor_ttob(grid)
@@ -318,19 +318,19 @@ def _test_backgrounds(win, c2, c3, msg):
     _test_outside_plus(grid)
     prompt(grid, win, msg=f"{msg} bkgd default {grid}")
 
-    grid = Grid(win, bkgd_box=(".", c3))
+    grid = Grid(win, bkgd_box=(ord("."), c3))
     _test_outside_ltor_ttob(grid)
     _test_outside_rtol_btot(grid)
     _test_outside_plus(grid)
     prompt(grid, win, msg=f"{msg} bkgd_box {grid}")
 
-    grid = Grid(win, bkgd_grid=(".", c2))
+    grid = Grid(win, bkgd_grid=(ord("."), c2))
     _test_outside_ltor_ttob(grid)
     _test_outside_rtol_btot(grid)
     _test_outside_plus(grid)
     prompt(grid, win, msg=f"{msg} bkgd_grid {grid}")
 
-    grid = Grid(win, bkgd_grid=(".", c2), bkgd_box=(".", c3))
+    grid = Grid(win, bkgd_grid=(ord("."), c2), bkgd_box=(ord("."), c3))
     _test_outside_ltor_ttob(grid)
     _test_outside_rtol_btot(grid)
     _test_outside_plus(grid)
@@ -347,7 +347,7 @@ def _test_backgrounds(win, c2, c3, msg):
 #     +---+
 
 
-def _test_outside_plus(grid, centered=True):
+def _test_outside_plus(grid: Grid, centered: bool = True) -> None:
 
     if centered:
         c = grid.box(
@@ -374,7 +374,7 @@ def _test_outside_plus(grid, centered=True):
 # +---+---+---+
 
 
-def _test_outside_ltor_ttob(grid):
+def _test_outside_ltor_ttob(grid: Grid) -> None:
     logger.success("left to right, from top to bottom")
 
     a = grid.box("a", 5, 10, top=grid, left=grid)
@@ -400,7 +400,7 @@ def _test_outside_ltor_ttob(grid):
 # +---+---+---+
 
 
-def _test_outside_rtol_btot(grid):
+def _test_outside_rtol_btot(grid: Grid) -> None:
     logger.success("right to left, from bottom to top")
 
     a = grid.box("a", 5, 10, bottom=grid, right=grid)
@@ -436,7 +436,7 @@ def _test_outside_rtol_btot(grid):
 # -------------------------------------------------------------------------------
 
 
-def prompt(grid, win, msg="Press any key to continue"):
+def prompt(grid: Grid, win: curses.window, msg: str = "Press any key to continue") -> None:
 
     # win.erase()
 

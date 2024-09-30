@@ -1,9 +1,11 @@
 """Libcurses core module."""
 
 import curses
+import sys
 from collections import defaultdict
+from contextlib import contextmanager
 from threading import Lock
-from typing import Callable
+from typing import Callable, Iterator
 
 # A function key handler receives the key pressed, and returns nothing.
 FKeyHandler = Callable[[int], None]
@@ -62,6 +64,29 @@ def is_fkey(key: int) -> bool:
             func(key)
         return True
     return False
+
+
+@contextmanager
+def preserve_cursor() -> Iterator[tuple[int, int]]:
+    """Save and restore the cursor."""
+
+    global LOCK  # noqa
+    global CURSORWIN  # noqa
+
+    with LOCK:
+        try:
+            y, x = CURSORWIN.getyx() if CURSORWIN else curses.getsyx()
+            yield y, x
+        finally:
+            if CURSORWIN:
+                try:
+                    CURSORWIN.move(y, x)
+                except curses.error as err:
+                    print(f"move({y}, {x}) err={err}", file=sys.stderr, flush=True)
+                CURSORWIN.refresh()
+            else:
+                curses.setsyx(y, x)
+                curses.doupdate()
 
 
 # def keyname(key):

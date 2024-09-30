@@ -1,7 +1,7 @@
 """Curses based boxes, menus, loggers."""
 
 from libcurses.colormap import get_colormap
-from libcurses.core import register_fkey, wrapper
+from libcurses.core import preserve_cursor, register_fkey, wrapper
 from libcurses.getkey import getkey
 from libcurses.getline import getline
 from libcurses.grid import Grid
@@ -11,6 +11,7 @@ from libcurses.sink import Sink
 
 __all__ = [
     "get_colormap",
+    "preserve_cursor",
     "register_fkey",
     "wrapper",
     "getkey",

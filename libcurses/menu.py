@@ -37,7 +37,7 @@ class Menu:
     menuitems: dict[str, MenuItem] = field(init=False, repr=False, default_factory=dict)
     max_len_keyname: int = field(default=0, init=False, repr=False)
 
-    def add_item(self, key: int, text: str, payload: Any = None) -> None:
+    def add_item(self, key: int | str, text: str, payload: Any = None) -> None:
         """Add item to menu.
 
         Args:

@@ -1,7 +1,6 @@
 """Logger sink to curses window."""
 
 import curses
-import sys
 
 from loguru import logger
 
@@ -105,11 +104,7 @@ class Sink:
 
         win = self.logwin
 
-        with libcurses.core.LOCK:
-
-            _y, _x = (
-                libcurses.core.CURSORWIN.getyx() if libcurses.core.CURSORWIN else curses.getsyx()
-            )
+        with libcurses.core.preserve_cursor():
 
             if sum(win.getyx()):
                 win.addch("\n")
@@ -124,13 +119,3 @@ class Sink:
             win.addch(delim)
             win.addstr(message.rstrip(), color)
             win.refresh()
-
-            if libcurses.core.CURSORWIN:
-                try:
-                    libcurses.core.CURSORWIN.move(_y, _x)
-                except curses.error as err:
-                    print(f"move({_y}, {_x}) err={err}", file=sys.stderr, flush=True)
-                libcurses.core.CURSORWIN.refresh()
-            else:
-                curses.setsyx(_y, _x)
-                curses.doupdate()

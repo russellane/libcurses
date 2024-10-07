@@ -197,6 +197,7 @@ def main5(win: curses.window) -> None:
     _test_fillers_none_to_grid = True
     if _test_fillers_none_to_grid:
         # fillers, none to grid
+        # pylint: disable=possibly-used-before-assignment
         tf = grid.box("tf", 5, 0, top=grid, right2l=ur, bottom=None, left2r=ul)
         rf = grid.box("rf", 0, 20, top2b=ur, right=grid, bottom2t=lr, left2r=None)
         bf = grid.box("bf", 5, 0, top2b=None, right2l=lr, bottom=grid, left2r=ll)

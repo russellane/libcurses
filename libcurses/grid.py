@@ -95,7 +95,7 @@ class Grid:
 
     # pylint: disable=too-many-instance-attributes
 
-    class N(IntFlag):  # pylint: disable=invalid-name
+    class N(IntFlag):
         """has neighbor to the direction."""
 
         T = 1
@@ -349,6 +349,7 @@ class Grid:
         top2b: curses.window | None = None,
         bottom2t: curses.window | None = None,
     ) -> curses.window:
+        # pylint: disable=too-many-positional-arguments
         """Create box.
 
         Creates and returns a new `curses` window, after drawing a box
@@ -484,6 +485,7 @@ class Grid:
         hi_name: str,
         hi2lo_name: str,
     ) -> tuple[int, int]:
+        # pylint: disable=too-many-positional-arguments
         """Returns the length and beginning coordinate of the given dimension.
 
         `_getmaxbeg` is a portmanteau of `getmaxyx` and `getbegyx`.
@@ -739,9 +741,9 @@ class Grid:
         upper: curses.window | None = None,
         lower: curses.window | None = None,
     ) -> None:
-
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-branches
+        # pylint: disable=too-many-positional-arguments
         # pylint: disable=too-many-statements
 
         # if left and right:

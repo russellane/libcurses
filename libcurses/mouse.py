@@ -64,6 +64,7 @@ class Mouse:
         ncols: int,
         args: Any = None,
     ) -> None:
+        # pylint: disable=too-many-positional-arguments
         """Call `func` with `args` when mouse event happens at (y, x)."""
 
         # pylint: disable=too-many-arguments

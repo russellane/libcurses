@@ -1,4 +1,7 @@
-"""Get Line."""
+"""Get Line.
+
+This module provides the `getline` function.
+"""
 
 import curses
 import curses.ascii
@@ -9,9 +12,17 @@ from libcurses.core import is_fkey
 from libcurses.getkey import getkey
 from libcurses.mouse import Mouse
 
+__all__ = ["getline"]
+
 
 def getline(win: curses.window) -> str | None:
-    """Return line of input from window."""
+    """Read and return a line of input from window.
+
+    A line is terminated with CR, LF or KEY_ENTER.
+    Backspace deletes the previous character.
+    NAK (ctrl-U) kills the line.
+    Mouse events are handled.
+    """
 
     # pylint: disable=too-many-branches
 

@@ -1,4 +1,7 @@
-"""Logger sink to curses window."""
+"""Logger sink to curses window.
+
+This module provides the `LogSink` class.
+"""
 
 import curses
 
@@ -7,9 +10,16 @@ from loguru import logger
 import libcurses.core
 from libcurses.colormap import get_colormap
 
+__all__ = ["LogSink"]
 
-class Sink:
-    """Logger sink to curses window."""
+
+class LogSink:
+    """Logger sink to curses window.
+
+    The `LogSink` class provides a logger destination that writes log
+    messages to a curses window, and methods that control various
+    logging features.
+    """
 
     # pylint: disable=too-many-instance-attributes
 
@@ -30,7 +40,7 @@ class Sink:
         self.logwin.scrollok(True)
 
         self._colormap = get_colormap()
-        self.config()
+        self._config()
 
     def reset_padding(self) -> None:
         """Reset column padding."""
@@ -42,7 +52,7 @@ class Sink:
         """Set logging level."""
 
         self.level = level
-        self.config()
+        self._config()
         logger.info(self.level)
         self.reset_padding()
 
@@ -50,7 +60,7 @@ class Sink:
         """Set format of `location` field."""
 
         self.location = location or ""
-        self.config()
+        self._config()
         logger.info(repr(self.location))
         self.reset_padding()
 
@@ -62,7 +72,7 @@ class Sink:
         self.set_level(_levels[min(verbose, len(_levels) - 1)])
         return verbose
 
-    def config(self) -> None:
+    def _config(self) -> None:
         """Not public."""
 
         if self._id is not None:
@@ -73,7 +83,7 @@ class Sink:
             self.reset_padding()
 
         self._id = logger.add(
-            self.sink,
+            self._sink,
             level=self.level,
             format=self.delim.join(
                 [
@@ -87,7 +97,7 @@ class Sink:
 
         logger.trace("add logger {} location {!r}", self._id, self.location)
 
-    def sink(self, msg: str) -> None:
+    def _sink(self, msg: str) -> None:
         """Not public."""
 
         delim = self.delim

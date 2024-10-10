@@ -2,6 +2,8 @@
 
 from collections import namedtuple
 
+__all__ = ["Border"]
+
 Border = namedtuple(
     "Border",
     ["ls", "rs", "ts", "bs", "tl", "tr", "bl", "br"],

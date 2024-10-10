@@ -1,12 +1,21 @@
-"""Bordered Window."""
+"""Bordered Window.
+
+This module provides the `BorderedWindow` class.
+"""
 
 import curses
 
 from libcurses.border import Border
 
+__all__ = ["BorderedWindow"]
+
 
 class BorderedWindow:
-    """Bordered Window."""
+    """A bordered window is composed of two curses windows...
+
+    1. an outer border window, `b`, that draws a box around
+    2. an inner working window `w`.
+    """
 
     def __init__(
         self,
@@ -14,16 +23,15 @@ class BorderedWindow:
         ncols: int,
         begin_y: int,
         begin_x: int,
-        _border: Border | None = None,
+        border: Border | None = None,
     ) -> None:
         """Create new bordered window with the given dimensions and optional border stylings.
 
-        A bordered window is composed of two windows:
-            1. an outer (border) window, which draws a box around
-            2. an inner (working) window.
-
         border=None means use default border stylings, not no border.
         """
+
+        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-positional-arguments
 
         self.nlines = nlines
         self.ncols = ncols
@@ -41,7 +49,7 @@ class BorderedWindow:
         self.w.keypad(True)
         self.w.refresh()
 
-        self.border(_border or Border())
+        self.border(border or Border())
 
     def __repr__(self) -> str:
 
@@ -77,10 +85,10 @@ class BorderedWindow:
         self.b.refresh()
         self.w.refresh()
 
-    def border(self, _border: Border) -> None:
+    def border(self, border: Border) -> None:
         """Set window border."""
 
-        self.b.border(*_border)
+        self.b.border(*border)
 
     def resize(self, nlines: int, ncols: int) -> None:
         """Resize window."""

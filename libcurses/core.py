@@ -7,6 +7,13 @@ from contextlib import contextmanager
 from threading import Lock
 from typing import Callable, Iterator
 
+__all__ = [
+    "wrapper",
+    "register_fkey",
+    "is_fkey",
+    "preserve_cursor",
+]
+
 # A function key handler receives the key pressed, and returns nothing.
 FKeyHandler = Callable[[int], None]
 
@@ -16,7 +23,7 @@ FKEYS: dict[int, list[FKeyHandler]]  # function key handlers
 
 
 def wrapper(func: Callable[[curses.window], None]) -> None:
-    """Wrap https://docs.python.org/3/library/curses.html#curses.wrapper."""
+    """Use instead of `curses.wrapper`."""
 
     def _wrapper(stdscr: curses.window) -> None:
 
@@ -68,7 +75,7 @@ def is_fkey(key: int) -> bool:
 
 @contextmanager
 def preserve_cursor() -> Iterator[tuple[int, int]]:
-    """Save and restore the cursor."""
+    """Context manager to save and restore the cursor."""
 
     global LOCK  # noqa
     global CURSORWIN  # noqa

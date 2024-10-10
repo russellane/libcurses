@@ -1,9 +1,14 @@
-"""Loguru/curses colormap."""
+"""Loguru/curses colormap.
+
+This module provides the `get_colormap` function.
+"""
 
 import curses
 import re
 
 from loguru import logger
+
+__all__ = ["get_colormap"]
 
 _COLORMAP: dict[str, int] = {}  # key=loguru-level-name, value=curses-color/attr
 

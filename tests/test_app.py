@@ -9,7 +9,7 @@ from itertools import cycle
 
 from loguru import logger
 
-from libcurses import Grid, Sink, getkey, getline, register_fkey, wrapper
+from libcurses import Grid, LogSink, getkey, getline, register_fkey, wrapper
 from libcurses.menu import Menu, MenuItem
 
 try:
@@ -39,8 +39,8 @@ class SampleTimer(threading.Thread):
         """Run sample widget."""
 
         # speed controls
-        register_fkey(lambda key: self.intervals.rotate(-1), curses.KEY_PPAGE)
-        register_fkey(lambda key: self.intervals.rotate(1), curses.KEY_NPAGE)
+        register_fkey(lambda key: self.intervals.rotate(-1), curses.KEY_F6)
+        register_fkey(lambda key: self.intervals.rotate(1), curses.KEY_F7)
 
         while True:
             secs = self.intervals[0]
@@ -138,7 +138,7 @@ class Application:
         )
 
         # Begin logging to `logwin`.
-        self.sink = Sink(self.logwin)
+        self.sink = LogSink(self.logwin)
 
         # Change format of `location` field on the fly; (not required)
         self.location = cycle(
@@ -162,7 +162,7 @@ class Application:
         register_fkey(self._cycle_verbose, curses.KEY_F9)
 
         # Reset logger column padding.
-        register_fkey(lambda key: self.sink.reset_padding(), curses.KEY_DC)
+        register_fkey(lambda key: self.sink.reset_padding(), curses.KEY_F10)
 
         self.grid.redraw()
 
@@ -297,10 +297,10 @@ class Application:
         return "\n".join(
             [
                 "Global function keys:",
+                f"  F6/F7: Faster/Slower: {self.timer.interval!r}",
                 f"  F8 Cycle location: {self.sink.location!r}",
                 f"  F9 Cycle level: {self.sink.level!r}",
-                f"  PageUp/PageDown: Faster/Slower: {self.timer.interval!r}",
-                "  Delete: Reset padding",
+                "   F10: Reset padding",
             ]
         )
 

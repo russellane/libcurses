@@ -1,11 +1,34 @@
-"""Mouse handling."""
+"""Mouse Event.
+
+This module provides the `MouseEvent` class.
+"""
 
 import copy
 import curses
 
+__all__ = ["MouseEvent"]
+
 
 class MouseEvent:
-    """Something done by a mouse; results of `curses.getmouse()`."""
+    """Wrap `curses.getmouse` with additional, convenience-properties.
+
+    `MouseEvent` encapsulates the results of `curses.getmouse`,
+
+        x               x-coordinate.
+        y               y-coordinate.
+        bstate          bitmask describing the type of event.
+
+    and provides these additional properties:
+
+        button          button number (1-5).
+        nclicks         number of clicks (1-3).
+        is_pressed      True if button is pressed.
+        is_released     True if button was just released.
+        is_alt          True if Alt key is held.
+        is_ctrl         True if Ctrl key is held.
+        is_shift        True if Shift key is held.
+        is_moving       True if mouse is moving.
+    """
 
     # pylint: disable=too-many-instance-attributes
     _last_mouse = None

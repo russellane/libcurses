@@ -5,6 +5,8 @@ import curses
 from libcurses.border import Border
 from libcurses.bw import BorderedWindow
 
+__all__ = ["WindowStack"]
+
 
 class WindowStack:
     """Vertical stack of windows."""

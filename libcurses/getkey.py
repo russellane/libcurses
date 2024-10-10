@@ -1,4 +1,7 @@
-"""Get Key."""
+"""Get Key.
+
+This module provides the `getkey` function.
+"""
 
 import curses
 import curses.ascii
@@ -8,9 +11,15 @@ from loguru import logger
 import libcurses.core
 from libcurses.mouse import Mouse
 
+__all__ = ["getkey"]
+
 
 def getkey(win: curses.window | None = None, no_mouse: bool = False) -> int | None:
-    """Read a character from window.
+    """Read and return a character from window.
+
+    Args:
+        win: curses window to read from.
+        no_mouse: ignore mouse events (for internal use).
 
     Return:
         -1 when no-input in no-delay mode, or

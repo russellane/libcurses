@@ -1,4 +1,7 @@
-"""Menu widget."""
+"""Menu widget.
+
+This module provides `Menu` and `MenuItem` classes.
+"""
 
 import curses
 import curses.ascii
@@ -10,6 +13,8 @@ from loguru import logger
 from libcurses.core import is_fkey
 from libcurses.getkey import getkey
 from libcurses.mouse import Mouse
+
+__all__ = ["Menu", "MenuItem"]
 
 
 @dataclass

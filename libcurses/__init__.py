@@ -28,15 +28,15 @@ from libcurses.mouse import add_mouse_handler, clear_mouse_handlers
 from libcurses.mouseevent import MouseEvent
 
 __all__ = [
+    "Grid",
+    "LogSink",
+    "MouseEvent",
+    "add_mouse_handler",
+    "clear_mouse_handlers",
     "get_colormap",
+    "getkey",
+    "getline",
     "preserve_cursor",
     "register_fkey",
     "wrapper",
-    "getkey",
-    "getline",
-    "Grid",
-    "LogSink",
-    "add_mouse_handler",
-    "clear_mouse_handlers",
-    "MouseEvent",
 ]

@@ -54,23 +54,23 @@ class Grid:
     parameters that describe the spatial-relationship to other windows on the
     screen, instead of (y,x) coordinates:
 
-            +--------+                 +--------+
-            |        |                 |  ^     |
-            |        |<------ left2r --|  |     |
-            |        |                 |  |     |
-            |<---------------- left ---|  |     |
-            |        |                 |  |     |
-            +--------+                 +--|-----+
-               |  |                       |  ^
-      bottom2t |  | bottom            top |  | top2b
-               v  |                       |  |
-            +-----|--+                 +--------+
-            |     |  |                 |        |
-            |     |  |-- right ---------------->|
-            |     |  |                 |        |
-            |     |  |-- right2l ----->|        |
-            |     v  |                 |        |
-            +--------+                 +--------+
+              +--------+                 +--------+
+              |        |                 |  ^     |
+              |        |<------ left2r --|  |     |
+              |        |                 |  |     |
+              |<---------------- left ---|  |     |
+              |        |                 |  |     |
+              +--------+                 +--|-----+
+                 |  |                       |  ^
+        bottom2t |  | bottom            top |  | top2b
+                 v  |                       |  |
+              +-----|--+                 +--------+
+              |     |  |                 |        |
+              |     |  |-- right ---------------->|
+              |     |  |                 |        |
+              |     |  |-- right2l ----->|        |
+              |     v  |                 |        |
+              +--------+                 +--------+
 
     For example, this 3x13 grid with three 3x5 boxes may be described at least
     three different ways:

@@ -20,59 +20,6 @@ Framework and tools for multi-threaded, curses(3)-based, terminal applications.
 * A `Grid` framework.
 
 
-### function get_colormap
-
-Return map of `loguru-level-name` to `curses-color/attr`.
-
-Call after creating all custom levels with `logger.level()`.
-Map is build once and cached; repeated calls return same map.
-
-
-### function preserve_cursor
-
-Context manager to save and restore the cursor.
-
-### function register_fkey
-
-Register `func` to be called when `key` is pressed.
-
-Args:
-    func: callable, to be called on receipt of `key`.
-    key: the key to be captured, e.g., `curses.KEY_F1`,
-    or zero (0) for all keys.
-
-`func` is appended to a list for the `key`;
-pass func=None to remove list of funcs for `key` from registry.
-
-
-### function wrapper
-
-Use instead of `curses.wrapper`.
-
-### function getkey
-
-Read and return a character from window.
-
-Args:
-    win: curses window to read from.
-    no_mouse: ignore mouse events (for internal use).
-
-Return:
-    -1 when no-input in no-delay mode, or
-    None on end of file, or
-    >=0 int character read.
-
-
-### function getline
-
-Read and return a line of input from window.
-
-A line is terminated with CR, LF or KEY_ENTER.
-Backspace deletes the previous character.
-NAK (ctrl-U) kills the line.
-Mouse events are handled.
-
-
 ### class Grid
 
 Grid of windows.
@@ -100,23 +47,23 @@ Grids also provide a wrapper around `curses.newwin` that takes positioning
 parameters that describe the spatial-relationship to other windows on the
 screen, instead of (y,x) coordinates:
 
-        +--------+                 +--------+
-        |        |                 |  ^     |
-        |        |<------ left2r --|  |     |
-        |        |                 |  |     |
-        |<---------------- left ---|  |     |
-        |        |                 |  |     |
-        +--------+                 +--|-----+
-           |  |                       |  ^
-  bottom2t |  | bottom            top |  | top2b
-           v  |                       |  |
-        +-----|--+                 +--------+
-        |     |  |                 |        |
-        |     |  |-- right ---------------->|
-        |     |  |                 |        |
-        |     |  |-- right2l ----->|        |
-        |     v  |                 |        |
-        +--------+                 +--------+
+          +--------+                 +--------+
+          |        |                 |  ^     |
+          |        |<------ left2r --|  |     |
+          |        |                 |  |     |
+          |<---------------- left ---|  |     |
+          |        |                 |  |     |
+          +--------+                 +--|-----+
+             |  |                       |  ^
+    bottom2t |  | bottom            top |  | top2b
+             v  |                       |  |
+          +-----|--+                 +--------+
+          |     |  |                 |        |
+          |     |  |-- right ---------------->|
+          |     |  |                 |        |
+          |     |  |-- right2l ----->|        |
+          |     v  |                 |        |
+          +--------+                 +--------+
 
 For example, this 3x13 grid with three 3x5 boxes may be described at least
 three different ways:
@@ -152,14 +99,6 @@ messages to a curses window, and methods that control various
 logging features.
 
 
-### method add_mouse_handler
-
-Call `func` with `args` when mouse event happens at (y, x).
-
-### method clear_mouse_handlers
-
-Remove all mouse handlers.
-
 ### class MouseEvent
 
 Wrap `curses.getmouse` with additional, convenience-properties.
@@ -181,4 +120,65 @@ and provides these additional properties:
     is_shift        True if Shift key is held.
     is_moving       True if mouse is moving.
 
+
+### method add_mouse_handler
+
+Call `func` with `args` when mouse event happens at (y, x).
+
+### method clear_mouse_handlers
+
+Remove all mouse handlers.
+
+### function get_colormap
+
+Return map of `loguru-level-name` to `curses-color/attr`.
+
+Call after creating all custom levels with `logger.level()`.
+Map is build once and cached; repeated calls return same map.
+
+
+### function getkey
+
+Read and return a character from window.
+
+Args:
+    win: curses window to read from.
+    no_mouse: ignore mouse events (for internal use).
+
+Return:
+    -1 when no-input in no-delay mode, or
+    None on end of file, or
+    >=0 int character read.
+
+
+### function getline
+
+Read and return a line of input from window.
+
+A line is terminated with CR, LF or KEY_ENTER.
+Backspace deletes the previous character.
+NAK (ctrl-U) kills the line.
+Mouse events are handled.
+
+
+### function preserve_cursor
+
+Context manager to save and restore the cursor.
+
+### function register_fkey
+
+Register `func` to be called when `key` is pressed.
+
+Args:
+    func: callable, to be called on receipt of `key`.
+    key: the key to be captured, e.g., `curses.KEY_F1`,
+    or zero (0) for all keys.
+
+`func` is appended to a list for the `key`;
+pass func=None to remove list of funcs for `key` from registry.
+
+
+### function wrapper
+
+Use instead of `curses.wrapper`.
 

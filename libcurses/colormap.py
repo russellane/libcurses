@@ -70,7 +70,7 @@ def get_colormap() -> dict[str, int]:
             curses.init_pair(idx + 1, fg, bg)
             _COLORMAP[lvl.name] = curses.color_pair(idx + 1) | attr
             logger.trace(
-                f"name={lvl.name} color={lvl.color} idx={idx+1} fg={fg} bg={bg} "
+                f"name={lvl.name} color={lvl.color} idx={idx + 1} fg={fg} bg={bg} "
                 f"color={_COLORMAP[lvl.name]} attr={attr:o}"
             )
 

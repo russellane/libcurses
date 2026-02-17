@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import curses
 import curses.ascii
+from dataclasses import dataclass
 from enum import IntFlag
 from typing import Any, Callable
 
@@ -24,6 +25,47 @@ CharAttr = tuple[int, int] | None
 
 # A callback to add boxes to an empty grid.
 GridBuilder = Callable[[], None]
+
+# Border offset constants
+BORDER_WIDTH = 1
+WINDOW_BORDER_TOTAL = 2  # 1 border on each side
+
+
+@dataclass
+class ResizeContext:
+    """Context for an interactive resize operation."""
+
+    mouse: MouseEvent
+    left: curses.window | None = None
+    right: curses.window | None = None
+    upper: curses.window | None = None
+    lower: curses.window | None = None
+    kb_resize_mode: bool = False
+
+    @property
+    def is_horizontal(self) -> bool:
+        """True if resizing left/right windows."""
+        return self.left is not None or self.right is not None
+
+    @property
+    def is_vertical(self) -> bool:
+        """True if resizing upper/lower windows."""
+        return self.upper is not None or self.lower is not None
+
+
+@dataclass
+class DimensionParams:
+    """Parameters for calculating a dimension (either horizontal or vertical)."""
+
+    lo: "Grid | curses.window | None" = None
+    lo2hi: "Grid | curses.window | None" = None
+    hi: "Grid | curses.window | None" = None
+    hi2lo: "Grid | curses.window | None" = None
+    lo_name: str = ""
+    lo2hi_name: str = ""
+    hi_name: str = ""
+    hi2lo_name: str = ""
+
 
 # -------------------------------------------------------------------------------
 
@@ -122,26 +164,6 @@ class Grid:
         |      |      |
         8------3------7
         """
-
-        # pre-black:
-        # cls._borders = {
-        #     0       | 0       | 0       | 0:            0,
-        #     0       | 0       | 0       | cls.N.T:      0,
-        #     0       | 0       | cls.N.R | 0:            0,
-        #     0       | 0       | cls.N.R | cls.N.T:      curses.ACS_LLCORNER,     # 8
-        #     0       | cls.N.B | 0       | 0:            0,
-        #     0       | cls.N.B | 0       | cls.N.T:      curses.ACS_VLINE,
-        #     0       | cls.N.B | cls.N.R | 0:            curses.ACS_ULCORNER,     # 5
-        #     0       | cls.N.B | cls.N.R | cls.N.T:      curses.ACS_LTEE,         # 4
-        #     cls.N.L | 0       | 0       | 0:            0,
-        #     cls.N.L | 0       | 0       | cls.N.T:      curses.ACS_LRCORNER,     # 7
-        #     cls.N.L | 0       | cls.N.R | 0:            curses.ACS_HLINE,
-        #     cls.N.L | 0       | cls.N.R | cls.N.T:      curses.ACS_BTEE,         # 3
-        #     cls.N.L | cls.N.B | 0       | 0:            curses.ACS_URCORNER,     # 6
-        #     cls.N.L | cls.N.B | 0       | cls.N.T:      curses.ACS_RTEE,         # 2
-        #     cls.N.L | cls.N.B | cls.N.R | 0:            curses.ACS_TTEE,         # 1
-        #     cls.N.L | cls.N.B | cls.N.R | cls.N.T:      curses.ACS_PLUS,
-        # }
 
         cls._borders = {
             0 | 0 | 0 | 0: 0,
@@ -392,13 +414,6 @@ class Grid:
         # pylint: disable=too-many-arguments
         # pylint: disable=too-many-locals
 
-        # logger.trace("-" * 80)
-
-        # logger.trace(
-        #     f"boxname={boxname!r} nlines={nlines} ncols={ncols} "
-        #     f"begin_y={begin_y} begin_x={begin_x}"
-        # )
-
         # Determine dimensions/coordinates of upper-left corner of box on the grid.
 
         nlines, begin_y = self._getmaxbeg(
@@ -431,23 +446,24 @@ class Grid:
             "right2l",
         )
 
-        # logger.trace(
-        #     f"boxname={boxname!r} nlines={nlines} ncols={ncols} "
-        #     f"begin_y={begin_y} begin_x={begin_x}"
-        # )
         self._draw_box(nlines, ncols, begin_y, begin_x)
 
         # If this box is known, then resize (instead of creating) the window.
 
         if known := [k for k, v in self.boxnames.items() if v == boxname]:
             win = known[0]
-            win.resize(nlines - 2, ncols - 2)
+            win.resize(nlines - WINDOW_BORDER_TOTAL, ncols - WINDOW_BORDER_TOTAL)
             win.move(0, 0)
-            win.mvwin(begin_y + 1, begin_x + 1)
+            win.mvwin(begin_y + BORDER_WIDTH, begin_x + BORDER_WIDTH)
             self.boxes.append(win)
         else:
             # create window inside the box
-            win = curses.newwin(nlines - 2, ncols - 2, begin_y + 1, begin_x + 1)
+            win = curses.newwin(
+                nlines - WINDOW_BORDER_TOTAL,
+                ncols - WINDOW_BORDER_TOTAL,
+                begin_y + BORDER_WIDTH,
+                begin_x + BORDER_WIDTH,
+            )
 
             if bkgd_box:
                 win.bkgd(*bkgd_box)
@@ -473,6 +489,59 @@ class Grid:
         return self.win.getmaxyx()
 
     # -------------------------------------------------------------------------------
+    # Dimension calculation helpers
+    # -------------------------------------------------------------------------------
+
+    def _validate_dimension_refs(self, meta: str, length: int, params: DimensionParams) -> None:
+        """Validate spatial reference parameters for a dimension."""
+        if params.lo and params.lo2hi:
+            raise ValueError(
+                f"{meta}, {params.lo_name!r} and {params.lo2hi_name!r} are mutually exclusive"
+            )
+
+        if params.hi and params.hi2lo:
+            raise ValueError(
+                f"{meta}, {params.hi_name!r} and {params.hi2lo_name!r} are mutually exclusive"
+            )
+
+        if params.lo2hi == self:
+            raise ValueError(
+                f"{meta}, use {params.lo_name!r} to reference grid, not {params.lo2hi_name!r}"
+            )
+
+        if params.hi2lo == self:
+            raise ValueError(
+                f"{meta}, use {params.hi_name!r} to reference grid, not {params.hi2lo_name!r}"
+            )
+
+        has_lo = params.lo or params.lo2hi
+        has_hi = params.hi or params.hi2lo
+
+        if has_lo and has_hi:
+            if length:
+                raise ValueError(f"{meta}, non-zero length={length} allows lo or hi, not both")
+        elif not length:
+            raise ValueError(f"{meta}, zero length={length} requires both lo and hi")
+
+    def _calculate_begin_from_refs(self, idx: int, params: DimensionParams) -> int | None:
+        """Calculate begin coordinate from low-side references."""
+        if params.lo:
+            if params.lo == self:
+                return self.win.getbegyx()[idx]
+            return params.lo.getbegyx()[idx] - BORDER_WIDTH
+        if params.lo2hi:
+            return params.lo2hi.getbegyx()[idx] + params.lo2hi.getmaxyx()[idx]
+        return None
+
+    def _calculate_end_from_refs(self, idx: int, params: DimensionParams) -> int | None:
+        """Calculate end coordinate from high-side references."""
+        if params.hi:
+            if params.hi == self:
+                return self.win.getbegyx()[idx] + self.win.getmaxyx()[idx] - 1
+            return params.hi.getbegyx()[idx] + params.hi.getmaxyx()[idx]
+        if params.hi2lo:
+            return params.hi2lo.getbegyx()[idx] - 1
+        return None
 
     def _getmaxbeg(
         self,
@@ -489,106 +558,47 @@ class Grid:
         hi_name: str,
         hi2lo_name: str,
     ) -> tuple[int, int]:
-        # pylint: disable=too-many-positional-arguments
         """Returns the length and beginning coordinate of the given dimension.
 
         `_getmaxbeg` is a portmanteau of `getmaxyx` and `getbegyx`.
         """
-
-        # pylint: disable=too-many-arguments
-        # pylint: disable=too-many-locals
-        # pylint: disable=too-many-branches
+        # No references - use input values directly
+        if not lo and not lo2hi and not hi and not hi2lo:
+            return length, i_begin
 
         dimension = ["nlines", "ncols"][idx]
         meta = f"boxname={boxname!r}, dimension={dimension!r}"
 
-        # logger.trace("-" * 80)
+        params = DimensionParams(
+            lo=lo,
+            lo2hi=lo2hi,
+            hi=hi,
+            hi2lo=hi2lo,
+            lo_name=lo_name,
+            lo2hi_name=lo2hi_name,
+            hi_name=hi_name,
+            hi2lo_name=hi2lo_name,
+        )
 
-        # -------------------------------------------------------------------------------
+        # Validate reference combinations
+        self._validate_dimension_refs(meta, length, params)
 
-        if not lo and not lo2hi and not hi and not hi2lo:
-            # calling like curses.newwin()
-            # logger.trace(f"{meta}, length={length} i_begin={i_begin}")
-            return length, i_begin
+        # Calculate begin and end from references
+        begin = self._calculate_begin_from_refs(idx, params)
+        end = self._calculate_end_from_refs(idx, params)
 
-        # -------------------------------------------------------------------------------
-
-        if lo and lo2hi:
-            raise ValueError(f"{meta}, {lo_name!r} and {lo2hi_name!r} are mutually exclusive")
-
-        if hi and hi2lo:
-            raise ValueError(f"{meta}, {hi_name!r} and {hi2lo_name!r} are mutually exclusive")
-
-        # -------------------------------------------------------------------------------
-
-        if lo2hi == self:
-            raise ValueError(
-                f"{meta}, use {lo_name!r} to reference the grid, not {lo2hi_name!r}"
-            )
-
-        if hi2lo == self:
-            raise ValueError(
-                f"{meta}, use {hi_name!r} to reference the grid, not {hi2lo_name!r}"
-            )
-
-        # -------------------------------------------------------------------------------
-
-        if (lo or lo2hi) and (hi or hi2lo):
-            if length:
-                raise ValueError(f"{meta}, non-zero length={length} allows lo or hi, not both")
-        elif not length:
-            raise ValueError(f"{meta}, zero length={length} requires both lo and hi")
-
-        # -------------------------------------------------------------------------------
-
-        if lo:
-            if lo == self:
-                begin = self.win.getbegyx()[idx]
-                # logger.trace(f"{meta}, begin={self.win.getbegyx()[idx]}")
-            else:
-                begin = lo.getbegyx()[idx] - 1  # to reach the border
-                # logger.trace(f"{meta}, begin={lo.getbegyx()[idx] - 1}")
-        elif lo2hi:
-            begin = lo2hi.getbegyx()[idx] + lo2hi.getmaxyx()[idx]
-            # logger.trace(f"{meta}, begin={lo2hi.getbegyx()[idx]} + {lo2hi.getmaxyx()[idx]}")
-        else:
-            begin = None
-            # logger.trace(f"{meta}, begin=None")
-
-        # -------------------------------------------------------------------------------
-
-        if hi:
-            if hi == self:
-                last = self.win.getbegyx()[idx] + self.win.getmaxyx()[idx] - 1
-                # logger.trace(
-                #     f"{meta}, last={self.win.getbegyx()[idx]} + {self.win.getmaxyx()[idx]} - 1"
-                # )
-            else:
-                last = hi.getbegyx()[idx] + hi.getmaxyx()[idx]
-                # logger.trace(f"{meta}, last={hi.getbegyx()[idx]} + {hi.getmaxyx()[idx]}")
-        elif hi2lo:
-            last = hi2lo.getbegyx()[idx] - 1
-            # logger.trace(f"{meta}, last={hi2lo.getbegyx()[idx]} - 1")
-        else:
-            last = None
-            # logger.trace(f"{meta}, last=None")
-
-        # -------------------------------------------------------------------------------
-
-        if begin is not None and last is not None:
+        # Resolve length and begin
+        if begin is not None and end is not None:
             assert not length
-            length = last - begin + 1
-            # logger.trace(f"{meta}, length={length} = {last} - {begin}, begin={begin}")
+            length = end - begin + 1
             return length, i_begin + begin
 
         assert length
         if begin is not None:
-            # logger.trace(f"{meta}, length={length}, begin={begin}")
             return length, i_begin + begin
 
-        assert last
-        begin = last - length + 1
-        # logger.trace(f"{meta}, length={length}, begin={begin}")
+        assert end is not None
+        begin = end - length + 1
         return length, i_begin + begin
 
     # -------------------------------------------------------------------------------
@@ -602,8 +612,6 @@ class Grid:
 
                     try:
                         self.win.addch(y, x, symbol, attr)
-                        # logger.trace(f'self={self} y={y} x={x}')
-
                     except curses.error as err:
                         # expect an error in the lower-right corner.
                         if y != self.nlines - 1 or x != self.ncols - 1:
@@ -626,7 +634,12 @@ class Grid:
             for win in self.boxes[1:]:
                 nlines, ncols = win.getmaxyx()
                 begin_y, begin_x = win.getbegyx()
-                self._draw_box(nlines + 2, ncols + 2, begin_y - 1, begin_x - 1)
+                self._draw_box(
+                    nlines + WINDOW_BORDER_TOTAL,
+                    ncols + WINDOW_BORDER_TOTAL,
+                    begin_y - BORDER_WIDTH,
+                    begin_x - BORDER_WIDTH,
+                )
 
             self._render_boxes()
 
@@ -648,11 +661,9 @@ class Grid:
 
     def winyx(self, win: curses.window) -> str:
         """Return string of window coordinates."""
-
-        # pylint: disable=consider-using-f-string
-        return "(boxname={!r}, l={} c={} y={} x={})".format(
-            self.boxnames[win], *win.getmaxyx(), *win.getbegyx()
-        )
+        nlines, ncols = win.getmaxyx()
+        begin_y, begin_x = win.getbegyx()
+        return f"(boxname={self.boxnames[win]!r}, l={nlines} c={ncols} y={begin_y} x={begin_x})"
 
     def getwin(self, y: int, x: int) -> curses.window | None:
         """Return window at y, x."""
@@ -695,7 +706,6 @@ class Grid:
         self.boxes = self.boxes[:1]
         if self._builder is not None:
             self._builder()
-        # self.redraw()
 
     def _handle_mouse_event(self, mouse: MouseEvent, args: Any) -> bool:
         """Handle mouse event to resize boxes within grid.
@@ -715,7 +725,6 @@ class Grid:
             and mouse.y >= self._mouse_min_y
             and mouse.y <= self._mouse_max_y
         ):
-            # logger.trace('not within grid')
             return False
 
         char = self.win.inch(mouse.y, mouse.x) & ~curses.A_COLOR
@@ -724,18 +733,226 @@ class Grid:
             left = self.getwin(mouse.y, mouse.x - 1)
             right = self.getwin(mouse.y, mouse.x + 1)
             self._resize(mouse, left=left, right=right)
-            # logger.trace('after _resize left/right')
             return True
 
         if char == curses.ACS_HLINE:
             upper = self.getwin(mouse.y - 1, mouse.x)
             lower = self.getwin(mouse.y + 1, mouse.x)
             self._resize(mouse, upper=upper, lower=lower)
-            # logger.trace('after _resize upper/lower')
             return True
 
-        # logger.trace('not a border char')
         return False
+
+    # --------------------------------------------------------------------------
+    # Resize helper methods
+    # --------------------------------------------------------------------------
+
+    def _highlight_resize_border(self, ctx: ResizeContext, highlight: bool) -> None:
+        """Set or clear highlight on the active resize border."""
+        if ctx.left:
+            self.border_attr(ctx.left, self.N.R, highlight)
+        elif ctx.right:
+            self.border_attr(ctx.right, self.N.L, highlight)
+        if ctx.upper:
+            self.border_attr(ctx.upper, self.N.B, highlight)
+        elif ctx.lower:
+            self.border_attr(ctx.lower, self.N.T, highlight)
+
+    def _is_resize_exit_key(self, key: int | None) -> bool:
+        """Return True if key should exit resize mode."""
+        if not key:
+            return True
+        if key in (curses.ascii.LF, curses.ascii.CR, curses.ascii.ESC, curses.KEY_ENTER):
+            return True
+        return False
+
+    def _handle_mouse_drag_input(self, key: int) -> tuple[MouseEvent | None, bool]:
+        """Handle mouse input in drag mode.
+
+        Returns (mouse_event, should_exit). If should_exit is True, exit resize.
+        If mouse_event is None and should_exit is False, continue to next iteration.
+        """
+        if key != curses.KEY_MOUSE:
+            return None, False  # Continue to next iteration
+
+        mouse = MouseEvent()
+        logger.trace(f"mouse={mouse!r}")
+
+        if mouse.is_released:
+            return None, True  # Exit resize
+
+        if not mouse.is_moving:
+            return None, False  # Continue to next iteration
+
+        return mouse, False
+
+    def _emulate_key_from_scroll(self, ctx: ResizeContext, mouse: MouseEvent) -> int | None:
+        """Convert scroll wheel events to arrow key codes.
+
+        Returns key code, None to exit, or 0 for no action.
+        """
+        if mouse.button == 4:
+            # Scroll up - emulate left and up arrows
+            if ctx.is_horizontal:
+                return curses.KEY_LEFT
+            if ctx.is_vertical:
+                return curses.KEY_UP
+        if mouse.button == 5:
+            # Scroll down - emulate right and down arrows
+            if ctx.is_horizontal:
+                return curses.KEY_RIGHT
+            if ctx.is_vertical:
+                return curses.KEY_DOWN
+        if mouse.nclicks or mouse.is_released:
+            return None  # Signal to exit resize
+        return 0  # No action
+
+    def _emulate_mouse_from_arrow(self, key: int, last_mouse: MouseEvent) -> MouseEvent | None:
+        """Convert arrow key to mouse movement. Returns new MouseEvent or None."""
+        if key == curses.KEY_LEFT:
+            if last_mouse.x <= self._mouse_min_x:
+                return None
+            mouse = copy.copy(last_mouse)
+            mouse.x -= 1
+        elif key == curses.KEY_RIGHT:
+            if last_mouse.x >= self._mouse_max_x - 1:
+                return None
+            mouse = copy.copy(last_mouse)
+            mouse.x += 1
+        elif key == curses.KEY_UP:
+            if last_mouse.y <= self._mouse_min_y:
+                return None
+            mouse = copy.copy(last_mouse)
+            mouse.y -= 1
+        elif key == curses.KEY_DOWN:
+            if last_mouse.y >= self._mouse_max_y:
+                return None
+            mouse = copy.copy(last_mouse)
+            mouse.y += 1
+        else:
+            return None
+
+        mouse.bstate = curses.REPORT_MOUSE_POSITION
+        mouse.is_moving = True
+        mouse.nclicks = 0
+        return mouse
+
+    def _can_shrink_windows(
+        self, ctx: ResizeContext, mouse: MouseEvent, last_mouse: MouseEvent
+    ) -> bool:
+        """Check if the proposed resize operation is allowed."""
+        if mouse.x < last_mouse.x and ctx.left:
+            _, ncols = ctx.left.getmaxyx()
+            if ncols <= 1:
+                logger.trace(f"cannot shrink left={self.winyx(ctx.left)}")
+                return False
+
+        if mouse.x > last_mouse.x and ctx.right:
+            _, ncols = ctx.right.getmaxyx()
+            if ncols <= 1:
+                logger.trace(f"cannot shrink right={self.winyx(ctx.right)}")
+                return False
+
+        if mouse.y < last_mouse.y and ctx.upper:
+            nlines, _ = ctx.upper.getmaxyx()
+            if nlines <= 1:
+                logger.trace(f"cannot shrink upper={self.winyx(ctx.upper)}")
+                return False
+
+        if mouse.y > last_mouse.y and ctx.lower:
+            nlines, _ = ctx.lower.getmaxyx()
+            if nlines <= 1:
+                logger.trace(f"cannot shrink lower={self.winyx(ctx.lower)}")
+                return False
+
+        return True
+
+    def _perform_horizontal_resize(
+        self, ctx: ResizeContext, mouse: MouseEvent, last_mouse: MouseEvent
+    ) -> bool:
+        """Perform horizontal resize. Returns True if resize occurred."""
+        resized = False
+
+        if mouse.x < last_mouse.x:
+            if ctx.left:
+                nlines, ncols = ctx.left.getmaxyx()
+                ctx.left.resize(nlines, ncols - 1)
+                resized = True
+            if ctx.right:
+                begin_y, begin_x = ctx.right.getbegyx()
+                ctx.right.mvwin(begin_y, begin_x - 1)
+                nlines, ncols = ctx.right.getmaxyx()
+                ctx.right.resize(nlines, ncols + 1)
+
+        elif mouse.x > last_mouse.x:
+            if ctx.right:
+                nlines, ncols = ctx.right.getmaxyx()
+                ctx.right.resize(nlines, ncols - 1)
+                resized = True
+                begin_y, begin_x = ctx.right.getbegyx()
+                ctx.right.mvwin(begin_y, begin_x + 1)
+            if ctx.left:
+                nlines, ncols = ctx.left.getmaxyx()
+                ctx.left.resize(nlines, ncols + 1)
+
+        return resized
+
+    def _perform_vertical_resize(
+        self, ctx: ResizeContext, mouse: MouseEvent, last_mouse: MouseEvent
+    ) -> bool:
+        """Perform vertical resize. Returns True if resize occurred."""
+        resized = False
+
+        if mouse.y < last_mouse.y:
+            if ctx.upper:
+                nlines, ncols = ctx.upper.getmaxyx()
+                ctx.upper.resize(nlines - 1, ncols)
+                resized = True
+            if ctx.lower:
+                begin_y, begin_x = ctx.lower.getbegyx()
+                nlines, ncols = ctx.lower.getmaxyx()
+                ctx.lower.mvwin(begin_y - 1, begin_x)
+                ctx.lower.resize(nlines + 1, ncols)
+
+        elif mouse.y > last_mouse.y:
+            if ctx.lower:
+                nlines, ncols = ctx.lower.getmaxyx()
+                ctx.lower.resize(nlines - 1, ncols)
+                resized = True
+                begin_y, begin_x = ctx.lower.getbegyx()
+                ctx.lower.mvwin(begin_y + 1, begin_x)
+            if ctx.upper:
+                nlines, ncols = ctx.upper.getmaxyx()
+                ctx.upper.resize(nlines + 1, ncols)
+
+        return resized
+
+    def _process_kb_resize_input(
+        self, ctx: ResizeContext, key: int, last_mouse: MouseEvent
+    ) -> tuple[MouseEvent | None, bool]:
+        """Process input in keyboard resize mode.
+
+        Returns (mouse_event, should_exit).
+        """
+        if key == curses.KEY_MOUSE:
+            mouse = MouseEvent()
+            logger.trace(f"mouse={mouse!r}")
+
+            emulated_key = self._emulate_key_from_scroll(ctx, mouse)
+            if emulated_key is None:
+                return None, True  # Exit
+            if emulated_key == 0:
+                return None, False  # Continue
+            key = emulated_key
+
+        new_mouse = self._emulate_mouse_from_arrow(key, last_mouse)
+        if new_mouse is None:
+            return None, False  # Continue
+        return new_mouse, False
+
+    # --------------------------------------------------------------------------
+    # Main resize method
+    # --------------------------------------------------------------------------
 
     def _resize(
         self,
@@ -745,234 +962,65 @@ class Grid:
         upper: curses.window | None = None,
         lower: curses.window | None = None,
     ) -> None:
-        # pylint: disable=too-many-arguments
-        # pylint: disable=too-many-branches
-        # pylint: disable=too-many-positional-arguments
-        # pylint: disable=too-many-statements
-
-        # if left and right:
-        #     logger.trace(f'left={self.winyx(left)} right={self.winyx(right)}')
-        # elif upper and lower:
-        #     logger.trace(f'upper={self.winyx(upper)} lower={self.winyx(lower)}')
-        # else:
-        #     raise RuntimeError('missing left/right or upper/lower')
-
-        kb_resize_mode = mouse.is_ctrl or (mouse.nclicks == 2)
+        """Interactive resize of windows adjacent to a border."""
+        ctx = ResizeContext(
+            mouse=mouse,
+            left=left,
+            right=right,
+            upper=upper,
+            lower=lower,
+            kb_resize_mode=mouse.is_ctrl or (mouse.nclicks == 2),
+        )
         resized = False
 
         while True:
-            last_mouse = mouse
+            last_mouse = ctx.mouse
 
             if resized:
                 self.redraw()
                 resized = False
 
-            #
-            if left:
-                self.border_attr(left, self.N.R, True)
-            elif right:
-                self.border_attr(right, self.N.L, True)
-            if upper:
-                self.border_attr(upper, self.N.B, True)
-            elif lower:
-                self.border_attr(lower, self.N.T, True)
+            # Highlight active border
+            self._highlight_resize_border(ctx, highlight=True)
             self.redraw()
 
-            #
             key = getkey(None, no_mouse=True)
 
-            #
-            if left:
-                self.border_attr(left, self.N.R, False)
-            elif right:
-                self.border_attr(right, self.N.L, False)
-            if upper:
-                self.border_attr(upper, self.N.B, False)
-            elif lower:
-                self.border_attr(lower, self.N.T, False)
+            # Clear highlight
+            self._highlight_resize_border(ctx, highlight=False)
             self.redraw()
 
-            #
-            if not key:
+            # Check for exit
+            if self._is_resize_exit_key(key):
                 return
 
-            if key in (curses.ascii.LF, curses.ascii.CR, curses.ascii.ESC, curses.KEY_ENTER):
-                return
+            if key is None:
+                continue
 
             if key == curses.ascii.FF:
                 self.redraw()
-                logger.trace("continue")
                 continue
 
-            if not kb_resize_mode:
-                # mouse-dragging resize mode
-
-                if key != curses.KEY_MOUSE:
-                    logger.trace("continue")
-                    continue
-
-                mouse = MouseEvent()
-                logger.trace(f"mouse={mouse!r}")
-
-                if mouse.is_released:
+            # Get new mouse position from input
+            if not ctx.kb_resize_mode:
+                new_mouse, should_exit = self._handle_mouse_drag_input(key)
+                if should_exit:
                     return
-
-                if not mouse.is_moving:
+                if new_mouse is None:
                     continue
-
+                ctx.mouse = new_mouse
             else:
-                assert kb_resize_mode
-
-                if key == curses.KEY_MOUSE:
-                    # emulate keyboard
-
-                    mouse = MouseEvent()
-                    logger.trace(f"mouse={mouse!r}")
-
-                    if mouse.button == 4:
-                        # emulate left and up arrows
-                        if left or right:
-                            key = curses.KEY_LEFT
-                        elif upper or lower:
-                            key = curses.KEY_UP
-                    elif mouse.button == 5:
-                        # emulate right and down arrows
-                        if left or right:
-                            key = curses.KEY_RIGHT
-                        elif upper or lower:
-                            key = curses.KEY_DOWN
-                    elif mouse.nclicks or mouse.is_released:
-                        # emulate ESC
-                        return
-
-                # emulate mouse
-
-                if key == curses.KEY_LEFT:
-                    if last_mouse.x <= self._mouse_min_x:
-                        logger.trace("continue")
-                        continue
-                    mouse = copy.copy(last_mouse)
-                    mouse.x -= 1
-
-                elif key == curses.KEY_RIGHT:
-                    if last_mouse.x >= self._mouse_max_x - 1:
-                        logger.trace("continue")
-                        continue
-                    mouse = copy.copy(last_mouse)
-                    mouse.x += 1
-
-                elif key == curses.KEY_UP:
-                    if mouse.y <= self._mouse_min_y:
-                        logger.trace("continue")
-                        continue
-                    mouse = copy.copy(last_mouse)
-                    mouse.y -= 1
-
-                elif key == curses.KEY_DOWN:
-                    if mouse.y >= self._mouse_max_y:
-                        logger.trace("continue")
-                        continue
-                    mouse = copy.copy(last_mouse)
-                    mouse.y += 1
-
-                else:
-                    logger.trace("continue")
+                new_mouse, should_exit = self._process_kb_resize_input(ctx, key, last_mouse)
+                if should_exit:
+                    return
+                if new_mouse is None:
                     continue
+                ctx.mouse = new_mouse
 
-                #
-                key = curses.KEY_MOUSE
-                mouse.bstate = curses.REPORT_MOUSE_POSITION
-                mouse.is_moving = True
-                mouse.nclicks = 0
+            # Validate resize is possible
+            if not self._can_shrink_windows(ctx, ctx.mouse, last_mouse):
+                continue
 
-            # make sure all operations are allowed before performing any.
-
-            if mouse.x < last_mouse.x and left:
-                nlines, ncols = left.getmaxyx()
-                if ncols <= 1:
-                    logger.trace(f"cannot shrink left={self.winyx(left)}")
-                    continue
-
-            if mouse.x > last_mouse.x and right:
-                nlines, ncols = right.getmaxyx()
-                if ncols <= 1:
-                    logger.trace(f"cannot shrink right={self.winyx(right)}")
-                    continue
-
-            if mouse.y < last_mouse.y and upper:
-                nlines, ncols = upper.getmaxyx()
-                if nlines <= 1:
-                    logger.trace(f"cannot shrink upper={self.winyx(upper)}")
-                    continue
-
-            if mouse.y > last_mouse.y and lower:
-                nlines, ncols = lower.getmaxyx()
-                if nlines <= 1:
-                    logger.trace(f"cannot shrink lower={self.winyx(lower)}")
-                    continue
-
-            # perform...
-
-            if mouse.x < last_mouse.x:
-                if left:
-                    nlines, ncols = left.getmaxyx()
-                    # remove rightmost column from left window
-                    left.resize(nlines, ncols - 1)
-                    resized = True
-
-                if right:
-                    # slide right window left 1 column
-                    begin_y, begin_x = right.getbegyx()
-                    right.mvwin(begin_y, begin_x - 1)
-
-                    # add 1 column to right of right window
-                    nlines, ncols = right.getmaxyx()
-                    right.resize(nlines, ncols + 1)
-
-            elif mouse.x > last_mouse.x:
-                if right:
-                    nlines, ncols = right.getmaxyx()
-                    # remove rightmost column from right window
-                    right.resize(nlines, ncols - 1)
-                    resized = True
-
-                    # slide right window right 1 column
-                    begin_y, begin_x = right.getbegyx()
-                    right.mvwin(begin_y, begin_x + 1)
-
-                if left:
-                    # add 1 column to right of left window
-                    nlines, ncols = left.getmaxyx()
-                    left.resize(nlines, ncols + 1)
-
-            if mouse.y < last_mouse.y:
-                if upper:
-                    nlines, ncols = upper.getmaxyx()
-                    # remove bottom row from upper window
-                    upper.resize(nlines - 1, ncols)
-                    resized = True
-
-                if lower:
-                    # slide lower window up 1 row
-                    begin_y, begin_x = lower.getbegyx()
-                    nlines, ncols = lower.getmaxyx()
-                    lower.mvwin(begin_y - 1, begin_x)
-
-                    # add 1 row to bottom of lower window
-                    lower.resize(nlines + 1, ncols)
-
-            elif mouse.y > last_mouse.y:
-                if lower:
-                    nlines, ncols = lower.getmaxyx()
-                    # remove bottom row from lower window
-                    lower.resize(nlines - 1, ncols)
-                    resized = True
-
-                    # slide lower window down 1 row
-                    begin_y, begin_x = lower.getbegyx()
-                    lower.mvwin(begin_y + 1, begin_x)
-
-                if upper:
-                    # add 1 row to bottom of upper window
-                    nlines, ncols = upper.getmaxyx()
-                    upper.resize(nlines + 1, ncols)
+            # Perform the resize
+            resized = self._perform_horizontal_resize(ctx, ctx.mouse, last_mouse)
+            resized = self._perform_vertical_resize(ctx, ctx.mouse, last_mouse) or resized

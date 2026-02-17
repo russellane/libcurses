@@ -6,6 +6,9 @@ ignore =
     # black; line break before binary operator
     W503,
 
-# don't check docstrings in tests
-per-file-ignores = 
-    tests/*:D,PLC
+# don't check docstrings in tests; suppress pytest fixture patterns
+per-file-ignores =
+    tests/*:D,PLC,PLW621,PLW613,PLW212,PLW611,PLW612,F841,F401,PLR903,PT004
+
+# grid.py has inherent complexity
+    libcurses/grid.py:PLC302,PLR902,PLR913,PLR917,PLR914

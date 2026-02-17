@@ -74,7 +74,7 @@ class Application:
 
         # Configure logger...
         # Remove bold from default levels.
-        for lvl in logger._core.levels.values():  # type: ignore[attr-defined]
+        for lvl in logger._core.levels.values():
             logger.level(lvl.name, color=lvl.color.replace("<bold>", ""))
         # Add custom logging levels...
         # Set severity of custom levels relative to builtins.
@@ -213,7 +213,7 @@ class Application:
             win=self.mainwin,
         )
 
-        self.menu.preprompt = self.preprompt  # type: ignore[method-assign]
+        self.menu.preprompt = self.preprompt
 
         def _echo(item: MenuItem) -> bool:
             """Shared handler."""

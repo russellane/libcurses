@@ -38,7 +38,7 @@ class Mouse:
         """
 
         newmask = curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION
-        (availmask, oldmask) = curses.mousemask(newmask)
+        availmask, oldmask = curses.mousemask(newmask)
         logger.trace(
             f"(availmask={availmask:#x}, oldmask={oldmask:#x}) = mousemask({newmask:#x})"
         )

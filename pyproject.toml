@@ -1,6 +1,6 @@
 [project]
 name = "rlane-libcurses"
-version = "1.0.9"
+version = "1.0.10"
 description = "Curses based boxes, menus, loggers"
 authors = [
     {name = "Russel Lane", email = "russel@rlane.com"},
@@ -24,21 +24,19 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/russellane/libcurses"
 
-[tool.pdm]
-
-[tool.pdm.dev-dependencies]
+[dependency-groups]
 dev = [
     "black>=24.10.0",
-    "flake8-bugbear>=24.10.31",
-    "flake8-pydocstyle>=0.2.4",
+    "flake8-bugbear>=24.12.12",
+    "flake8-pydocstyle>=0.2.5",
     "flake8-pylint>=0.2.1",
-    "flake8-pytest-style>=2.0.0",
+    "flake8-pytest-style>=2.1.0",
     "flake8-simplify>=0.21.0",
     "flake8>=7.1.1",
     "isort>=5.13.2",
-    "mypy>=1.13.0",
+    "mypy>=1.14.1",
     "pytest-cov>=6.0.0",
-    "pytest>=8.3.3",
+    "pytest>=8.3.4",
 ]
 
 [tool.black]
@@ -82,6 +80,12 @@ add-ignore = [
 
 [tool.mypy]
 strict = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+disable_error_code = ["attr-defined", "assignment", "method-assign", "arg-type", "comparison-overlap"]
 
 [build-system]
 requires = ["pdm-backend"]

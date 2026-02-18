@@ -131,54 +131,78 @@ Remove all mouse handlers.
 
 ### function get_colormap
 
-Return map of `loguru-level-name` to `curses-color/attr`.
+```python
+get_colormap() -> dict[str, int]
+```
 
-Call after creating all custom levels with `logger.level()`.
-Map is build once and cached; repeated calls return same map.
+    Return map of `loguru-level-name` to `curses-color/attr`.
+
+    Call after creating all custom levels with `logger.level()`.
+    Map is build once and cached; repeated calls return same map.
 
 
 ### function getkey
 
-Read and return a character from window.
+```python
+getkey(win: _curses.window | None = None, no_mouse: bool = False) -> int | None
+```
 
-Args:
-    win: curses window to read from.
-    no_mouse: ignore mouse events (for internal use).
+    Read and return a character from window.
 
-Return:
-    -1 when no-input in no-delay mode, or
-    None on end of file, or
-    >=0 int character read.
+    Args:
+        win: curses window to read from.
+        no_mouse: ignore mouse events (for internal use).
+
+    Return:
+        -1 when no-input in no-delay mode, or
+        None on end of file, or
+        >=0 int character read.
 
 
 ### function getline
 
-Read and return a line of input from window.
+```python
+getline(win: _curses.window) -> str | None
+```
 
-A line is terminated with CR, LF or KEY_ENTER.
-Backspace deletes the previous character.
-NAK (ctrl-U) kills the line.
-Mouse events are handled.
+    Read and return a line of input from window.
+
+    A line is terminated with CR, LF or KEY_ENTER.
+    Backspace deletes the previous character.
+    NAK (ctrl-U) kills the line.
+    Mouse events are handled.
 
 
 ### function preserve_cursor
 
-Context manager to save and restore the cursor.
+```python
+preserve_cursor() -> Iterator[tuple[int, int]]
+```
+
+    Context manager to save and restore the cursor.
 
 ### function register_fkey
 
-Register `func` to be called when `key` is pressed.
+```python
+register_fkey(func: Callable[[int], NoneType], key: int = 0) -> None
+```
 
-Args:
-    func: callable, to be called on receipt of `key`.
-    key: the key to be captured, e.g., `curses.KEY_F1`,
-    or zero (0) for all keys.
+    Register `func` to be called when `key` is pressed.
 
-`func` is appended to a list for the `key`;
-pass func=None to remove list of funcs for `key` from registry.
+    Args:
+        func: callable, to be called on receipt of `key`.
+        key: the key to be captured, e.g., `curses.KEY_F1`,
+        or zero (0) for all keys.
+
+    `func` is appended to a list for the `key`;
+    pass func=None to remove list of funcs for `key` from registry.
 
 
 ### function wrapper
 
-Use instead of `curses.wrapper`.
+```python
+wrapper(func: Callable[[_curses.window], NoneType]) -> None
+```
+
+    Use instead of `curses.wrapper`.
 
